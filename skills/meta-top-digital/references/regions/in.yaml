@@ -1,0 +1,77 @@
+region_code: in
+display_name: India
+currency: INR
+currency_symbol: "₹"
+languages:
+  - English
+  - Hindi
+regulatory_body:
+  name: Advertising Standards Council of India
+  short: ASCI
+  url: https://asci.social/complaints/
+  one_line_summary: "Truthful and non-misleading ads; substantiated claims for health, finance, education; compliance with IT Rules 2021 for digital media."
+prohibited_categories_digital:
+  - crypto-trading-signals
+  - mlm-recruitment
+  - forex-copy-trading
+  - get-rich-quick-income-claims
+  - payday-lending
+  - online-courses
+  - cohort-programs
+  - saas-subscriptions
+  - paid-memberships
+  - physical-ebooks-with-shipping
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+digital_categories:
+  - name: notion-templates-and-life-os
+    positioning_note: "Notion dashboards, second-brain systems, CRM templates; ₹199–₹1,999 ladders dominate Gumroad India + Instamojo."
+  - name: prompt-packs-and-ai-workflow-bundles
+    positioning_note: "Midjourney / ChatGPT / Claude prompt bundles for creators; ₹199–₹599 instant-download hook."
+  - name: spreadsheet-and-finance-templates
+    positioning_note: "Excel / Google Sheets templates (budgeting, SaaS metrics, wedding planners); ₹99–₹499 anchors work."
+  - name: design-assets-and-canva-templates
+    positioning_note: "Canva / Instagram template packs for SMBs and creators; ₹199–₹999 with commercial license upsell."
+  - name: ebook-bundles-and-printables
+    positioning_note: "Downloadable guides, workbooks, wall art, life-planner PDFs; ₹99–₹599 loss-leader to ₹1,999 bundle."
+digital_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
+authoritative_sources:
+  - source_name: ASCI Code (Self-Regulation)
+    url: https://asci.social/code/
+  - source_name: MeitY IT Rules 2021 (Digital Media)
+    url: https://www.meity.gov.in/content/information-technology-intermediary-guidelines-and-digital-media-ethics-code-rules-2021
+  - source_name: RBI Master Directions on Digital Lending
+    url: https://www.rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12143
+  - source_name: Meta India Advertising Standards
+    url: https://www.facebook.com/policies/ads
+digital_marketplaces:
+  - name: Gumroad India Discover
+    url: https://gumroad.com/discover
+    primary_category: digital-marketplace-discover
+  - name: Instamojo Top Sellers
+    url: https://instamojo.com/featured
+    primary_category: digital-marketplace-discover
+  - name: Notion Marketplace (Public Catalog)
+    url: https://www.notion.so/marketplace
+    primary_category: digital-marketplace-discover
+  - name: Creative Market India
+    url: https://creativemarket.com
+    primary_category: digital-marketplace-discover
+  - name: Canva Creators (India landing)
+    url: https://www.canva.com/creators/templates/
+    primary_category: digital-marketplace-discover
+  - name: Lemon Squeezy Creator Pages
+    url: https://www.lemonsqueezy.com
+    primary_category: digital-marketplace-discover
+  - name: Meta India Ad Library landing
+    url: https://www.facebook.com/ads/library/?active_status=active&country=IN
+    primary_category: meta-ad-library
+  - name: ASCI Code
+    url: https://www.ascionline.in/the-asci-code/
+    primary_category: regulatory
