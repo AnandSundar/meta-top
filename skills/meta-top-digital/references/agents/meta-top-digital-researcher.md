@@ -89,11 +89,18 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
    - Exit code `0` = ≥1 result; exit code `2` = zero results.
    - Top 2 queries from the seed list above are sufficient; more queries wastes capacity.
 3. **WebFetch curated `digital_marketplaces` URLs** from `references/regions/<region>.yaml`'s `digital_marketplaces` list (5–8 marketplace-domain URLs per region; cap at **4** WebFetch calls to keep within the 20-call ceiling). Skip any URL that 403s/404s. Marketplace URLs are stable catalog/index pages (gumroad.com/discover, instamojo.com/featured, notion.so/marketplace, creativemarket.com, canva.com/creators), so they survive subdomain migrations better than individual creator-store URLs.
-4. **Curated-only digest** — final fallback: emit a digest using the region YAML's `digital_categories` with `pricing_examples: []`, and append `"data_quality_note": "WebSearch and keyless floor both returned 0 results; brief uses curated anchors only."` Continue to Step 4.
+4. **Playwright browser fallback (v1.2+, 2026-09-27)** — fire this tier only when tier 3 returned 403/404 on **≥2 marketplace URLs** OR `pricing_examples` is empty across all `top_categories` after tier 3. Invoke the **playwright MCP server** via:
+   - `mcp__plugin_playwright_playwright__browser_navigate` to load the JS-driven marketplace URL (e.g., Canva Creators search, dynamic Gumroad category page, Instamojo storefront).
+   - `mcp__plugin_playwright_playwright__browser_snapshot` (a11y-tree) to extract per-product prices in INR.
+   - Optional: `mcp__plugin_playwright_playwright__browser_evaluate` to run inline JS (e.g., `() => Array.from(document.querySelectorAll('[data-price]')).map(e => e.textContent)`).
+   - **Skip this tier entirely if the playwright MCP tools are not available in your tool list** — fall through to tier 5.
+   - **Cap: ≤2 browser navigations per invocation.** Playwright is heavy (browser launch + JS rendering); use it only on the most-likely-to-clear-hard-block URL.
+   - **Trigger per-target: only retry a URL that WebFetch 403/404'd, not one that returned valid HTML but no pricing.** Distinguish "blocked" from "no-data".
+5. **Curated-only digest** — final fallback: emit a digest using the region YAML's `digital_categories` with `pricing_examples: []`, and append `"data_quality_note": "WebSearch, keyless floor, WebFetch, and Playwright browser fallback all returned 0 results; brief uses curated anchors only."` Continue to Step 4.
 
-**Transparency rule:** when tier 2 or 3 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after WebSearch returned <M>."` Do not silently substitute.
+**Transparency rule:** when tier 2, 3, or 4 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after WebSearch returned <M>."` (e.g., `"Ladder tier 4 (Playwright) contributed 1 source after tier 3 WebFetch returned 403 on Canva Creators."`) Do not silently substitute.
 
-**Scope ceiling:** ≤8 total sources across all tiers; ≤20 total WebFetch calls across the whole invocation (seed queries + tier 3 marketplace fetches).
+**Scope ceiling:** ≤8 total sources across all tiers; ≤20 total fetch calls across the whole invocation (WebSearch doesn't count; tier 3 WebFetch ≤4 calls; tier 4 Playwright ≤2 navigations). Playwright navigations count toward the 20-call ceiling.
 
 ### Step 3b — Filter
 
@@ -242,3 +249,6 @@ To prevent scope creep:
 - Does NOT scrape behind auth walls.
 - Does NOT fabricate benchmarks. The no-estimate rule is load-bearing.
 - Does NOT modify any file or push any state. Output is JSON to stdout.
+- Does NOT invoke the playwright MCP fallback (tier 4) unless tier 3 (WebFetch) has returned 403/404 on **≥2 marketplace URLs** OR `pricing_examples` is empty across all categories after tier 3. The Playwright tier is a last-resort, not a default — each navigation is heavier than a WebFetch.
+- Does NOT retry a Playwright navigation on a URL that WebFetch returned as valid HTML (even if empty); only retry URLs that were blocked (403/404). Distinguish "blocked" from "no-data" before paying the Playwright cost.
+- Does NOT `pip install` the `playwright` Python package or download browser binaries. The MCP server is the only supported invocation path; if unavailable, the ladder falls through to tier 5 (curated anchors).

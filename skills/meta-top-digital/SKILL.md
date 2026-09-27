@@ -28,7 +28,7 @@ Trust + ethics frame baked in: category design, not content cloning. Cloning of 
 
 A `/meta-top-digital <region>` invocation is complete when:
 
-1. Line 1 of the output is the badge: `📊 meta-top-digital v{X} · region: {region} · {YYYY-MM-DD}`. `{X}` is this skill's version (currently `v1`); bump it intentionally when shipping breaking changes, never auto-increment per invocation.
+1. Line 1 of the output is the badge: `📊 meta-top-digital v{X} · region: {region} · {YYYY-MM-DD}`. `{X}` is this skill's version (currently `v1.2`); bump it intentionally when shipping breaking changes, never auto-increment per invocation.
 2. The six canonical sections are present in this order: (a) Market snapshot, (b) Top 5–7 **digital categories** with local-currency pricing, (c) Winning ad creative patterns, (d) Specific product examples, (e) Meta ad cost benchmarks (CPM/CPC/CPV in the region's local currency), (f) Option B actionable brief.
 3. Every price reference is in the region's local currency (₹ / $ / CAD / £ / AUD / AED). USD is permitted as a secondary annotation only when ground-truth sources report USD (rare); never silently convert.
 4. Every citation is inline `[name](url)` markdown. **No raw URLs. No trailing Sources block. No broken empty `[]()` links.** URLs use `http://` or `https://`; `javascript:`, `data:`, `file:` are rejected.
@@ -54,22 +54,23 @@ These rules apply to every `/meta-top-digital` output regardless of region:
 
 R10 (from the plan's requirements) is a hard-block: if no pricing tier in the live research carries `pricing_tier_source: observed`, the brief does not ship. Output the blockquote:
 
-> **⚠️ category-pricing-research-required** — at least one observed pricing example is required before the brief ships. Run `/meta-top-digital <region> --category=<name>` after manually observing pricing for the target category (one paid marketplace URL is enough). When all ladders return zero observed prices, do **not** promote the seed tier anchors (₹199/₹599/₹1,999 for India; equivalent local-currency anchors per region) as concrete tiers — surface them under Section (b) with a `[unverified starting points, not observed]` callout and stop.
+> **⚠️ category-pricing-research-required** — at least one observed pricing example is required before the brief ships. Run `/meta-top-digital <region> --category=<name>` after manually observing pricing for the target category (one paid marketplace URL is enough). **If the host environment has the playwright MCP server configured, the next invocation will auto-attempt the tier-4 browser fallback and may clear the hard-block without manual intervention** — verify the MCP is available before relying on this. When all ladders (including tier 4) return zero observed prices, do **not** promote the seed tier anchors (₹199/₹599/₹1,999 for India; equivalent local-currency anchors per region) as concrete tiers — surface them under Section (b) with a `[unverified starting points, not observed]` callout and stop.
 
 This is fail-closed: a brief built on unobserved seed prices is the failure mode this skill explicitly guards against.
 
-## Reliability: source ladder (v1.1+, mirror of meta-top v1.1)
+## Reliability: source ladder (v1.2+, mirror of meta-top v1.1)
 
-When the host's WebSearch tool is unavailable or returns empty payloads, meta-top-digital does NOT fail outright. The sub-agent walks a transparent 4-tier source ladder. Each tier is fall-through; the next tier only fires when the previous returned **≤5 sources** (US/IN) or **< 3 sources** (others). The ladder is the **same** floor meta-top v1.1 uses — `scripts/keyless_search.py` is copied verbatim from `skills/meta-top/scripts/`, and any future divergence lives upstream, never here.
+When the host's WebSearch tool is unavailable or returns empty payloads, meta-top-digital does NOT fail outright. The sub-agent walks a transparent 5-tier source ladder. Each tier is fall-through; the next tier only fires when the previous returned **≤5 sources** (US/IN) or **< 3 sources** (others). The ladder is the **same** floor meta-top v1.1 uses — `scripts/keyless_search.py` is copied verbatim from `skills/meta-top/scripts/`, and any future divergence lives upstream, never here.
 
 1. **Host-native WebSearch** — primary tier.
 2. **Keyless DDG/SearXNG** — `scripts/keyless_search.py "QUERY" --count 5`. Stdlib-only, no API keys, no recurring cost. Mirrors last30days's `web_search_keyless.py` pattern.
 3. **Curated `digital_marketplaces`** — direct WebFetch to each marketplace-domain URL in `references/regions/<region>.yaml`'s `digital_marketplaces` list. Cap at 4 fetches; skip any URL that 403s/404s. Marketplace URLs are stable catalog/index pages (gumroad.com/discover, instamojo.com/featured, notion.so/marketplace, creativemarket.com, canva.com/creators), so they survive subdomain migrations better than individual creator-store URLs.
-4. **Curated anchors only** — final fallback. Brief still ships; `data_quality_note` flags the limitation transparently.
+4. **Playwright browser fallback** *(v1.2+, 2026-09-27)* — when tier 3 returns 403/404 on **≥2 marketplace URLs** OR `pricing_examples` is empty across all `top_categories` after tier 3, fall through to a real browser via the **playwright MCP server** (`mcp__plugin_playwright_playwright__browser_*`). Use `browser_navigate` + `browser_snapshot` (a11y-tree) to render JS-driven marketplace surfaces (Canva Creators, dynamic Gumroad search, Instamojo storefront pages) and extract per-product INR prices that WebFetch cannot see. Cap at **≤2 browser navigations per invocation** to respect the latency budget. **Skip this tier entirely if the playwright MCP server is not configured in the host environment** — fall through to tier 5. This tier is **browser automation, not a Python fallback**; no `pip install` of the `playwright` Python package required.
+5. **Curated anchors only** — final fallback. Brief still ships; `data_quality_note` flags the limitation transparently.
 
-When tier 2 or 3 contributes any source, `partial_research: true` and the `data_quality_note` records which tier filled the gap (e.g., `"Ladder tier 3 contributed 3 sources after WebSearch and keyless floor both returned 0."`).
+When tier 2, 3, or 4 contributes any source, `partial_research: true` and the `data_quality_note` records which tier filled the gap (e.g., `"Ladder tier 4 (Playwright) contributed 2 sources after WebFetch returned 403 on Canva and Instamojo."`).
 
-Scope ceiling (matching meta-top v1.1 line 85 — do not regress to off-by-one): ≤8 total sources across all tiers; ≤20 total WebFetch calls across the whole invocation (seed queries + tier 3 marketplace fetches).
+Scope ceiling (matching meta-top v1.1 line 85 — do not regress to off-by-one): ≤8 total sources across all tiers; ≤20 total fetch calls across the whole invocation (seed queries + tier 3 WebFetch + tier 4 Playwright navigations). Playwright navigations count toward the 20-call ceiling, not separately.
 
 ## Step 0: Pre-Flight
 
@@ -276,7 +277,7 @@ If a region's `format_constraints` declare, e.g., that financial products in UAE
 To prevent scope creep:
 
 - **No courses, cohort programs, SaaS subscriptions, paid communities, or physical goods** in the brief. Live research matching these is filtered out under `prohibited_categories_digital` per region.
-- **No bundled Python script** in v1's main path. All live-data work happens inside the sub-agent via WebSearch/WebFetch. **v1.1 lifts this rule scoped to a floor-tier keyless DDG fallback only** — `scripts/lib/web_search_keyless.py` + `scripts/keyless_search.py` mirror meta-top's `web_search_keyless.py` pattern (stdlib-only, no API keys, no recurring cost), copied byte-for-byte from `skills/meta-top/scripts/`. The sub-agent uses it as tier 2 of the source ladder, never as a Python replacement for the host's WebSearch. Broader paid-search Python fallbacks (Brave / Serper / SerpAPI / Exa) remain out of scope until v1.5+.
+- **No bundled Python script** in v1's main path. All live-data work happens inside the sub-agent via WebSearch/WebFetch. **v1.1 lifts this rule scoped to a floor-tier keyless DDG fallback only** — `scripts/lib/web_search_keyless.py` + `scripts/keyless_search.py` mirror meta-top's `web_search_keyless.py` pattern (stdlib-only, no API keys, no recurring cost), copied byte-for-byte from `skills/meta-top/scripts/`. The sub-agent uses it as tier 2 of the source ladder, never as a Python replacement for the host's WebSearch. **Tier 4 (Playwright browser fallback, v1.2+) is browser automation, not a Python fallback** — it uses the playwright MCP server (`mcp__plugin_playwright_playwright__browser_*`) to render JS-driven marketplace surfaces that WebFetch cannot reach. The MCP server must be configured in the host environment; if it is not, tier 4 is skipped and the ladder falls through to curated anchors only. Broader paid-search Python fallbacks (Brave / Serper / SerpAPI / Exa) remain out of scope until v1.5+.
 - **No `--last=N`** time-window flag. The skill is a snapshot, not a trend.
 - **No `--category=<name>` overlap with `--emit=html`** is allowed; both flags are orthogonal.
 - **No multi-language output** in v1. English only.
