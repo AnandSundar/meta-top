@@ -9,3 +9,7 @@ Thumbs.db
 
 # Skill artifacts (per-skill, kept out of version control)
 skills/*/meta-top-reports/
+
+# Python bytecode (auto-created when scripts/ is imported)
+__pycache__/
+*.pyc
