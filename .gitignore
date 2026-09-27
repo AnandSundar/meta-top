@@ -1,10 +1,11 @@
-# Editor / OS noise
+# OS / shell artifacts (Windows stacks, macOS metadata)
+*.stackdump
 .DS_Store
 Thumbs.db
-*.swp
-*.swo
-*~
 
-# Local secrets / config
-.env
-.env.local
+# Editor / IDE
+.vscode/
+.idea/
+
+# Skill artifacts (per-skill, kept out of version control)
+skills/*/meta-top-reports/
