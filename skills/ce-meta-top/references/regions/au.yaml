@@ -1,0 +1,40 @@
+region_code: au
+display_name: Australia
+currency: AUD
+currency_symbol: "AUD"
+languages:
+  - English
+regulatory_body:
+  name: Australian Communications and Media Authority and Australian Association of National Advertisers
+  short: ACMA / AANA
+  url: https://aana.com.au/code-of-ethics/
+  one_line_summary: "AANA Code of Ethics (honesty, decency, truth; substantiated claims); ACMA enforces broadcast/online content and Privacy Act 1988."
+prohibited_categories:
+  - crypto-trading-signals
+  - mlm-recruitment
+  - payday-lending
+  - get-rich-quick-income-claims
+  - gambling-without-state-license
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+top_categories:
+  - name: online-courses-and-coaching
+    positioning_note: "High-ticket cohort programs; pricing ladder AUD $197 / AUD $997 / AUD $4,997."
+  - name: ecommerce-bundles-and-dtc
+    positioning_note: "Beauty, supplements, home bundles; AUD $29 / $69 / $149 anchors work; UGC + founder-narrative dominant."
+  - name: fitness-and-wellness-subscriptions
+    positioning_note: "Apparel + class-passes + supplements; testimonial + before-after creative; founder-led IG presence."
+top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
+authoritative_sources:
+  - source_name: AANA Code of Ethics
+    url: https://aana.com.au/code-of-ethics/
+  - source_name: ACMA Advertising Rules
+    url: https://www.acma.gov.au/advertising
+  - source_name: OAIC Privacy Act 1988 (Australian Privacy Principles)
+    url: https://www.oaic.gov.au/privacy/privacy-legislation/the-privacy-act

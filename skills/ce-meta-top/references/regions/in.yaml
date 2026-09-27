@@ -1,0 +1,41 @@
+region_code: in
+display_name: India
+currency: INR
+currency_symbol: "₹"
+languages:
+  - English
+  - Hindi
+regulatory_body:
+  name: Advertising Standards Council of India
+  short: ASCI
+  url: https://asci.social/complaints/
+  one_line_summary: "Truthful and non-misleading ads; substantiated claims for health, finance, education; compliance with IT Rules 2021 for digital media."
+prohibited_categories:
+  - crypto-trading-signals
+  - mlm-recruitment
+  - forex-copy-trading
+  - get-rich-quick-income-claims
+  - payday-lending
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+top_categories:
+  - name: edtech-and-courses
+    positioning_note: "Vernacular + tiered-pricing funnels dominate; UPI friction means time-to-first-payment is the conversion lever."
+  - name: fintech-and-payments
+    positioning_note: "RBI-licensed products carry trust; cashback and reward mechanics convert against UPI rails."
+  - name: beauty-and-personal-care
+    positioning_note: "D2C brands scale on Meta with UGC + before-after hooks; price ladder ₹199/₹499/₹999."
+top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
+authoritative_sources:
+  - source_name: ASCI Code (Self-Regulation)
+    url: https://asci.social/code/
+  - source_name: MeitY IT Rules 2021 (Digital Media)
+    url: https://www.meity.gov.in/content/information-technology-intermediary-guidelines-and-digital-media-ethics-code-rules-2021
+  - source_name: RBI Master Directions on Digital Lending
+    url: https://www.rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12143

@@ -1,0 +1,42 @@
+region_code: ae
+display_name: United Arab Emirates
+currency: AED
+currency_symbol: "AED"
+languages:
+  - Arabic (preferred for landing pages)
+  - English
+regulatory_body:
+  name: National Media Council and Telecommunications and Digital Government Regulatory Authority
+  short: NMC / TDRA
+  url: https://u.ae/en/information-and-services/business/media-and-advertising
+  one_line_summary: "NMC licenses all advertising in the UAE; Arabic landing pages preferred for trust; stricter rules for financial products and cryptocurrency promotions."
+prohibited_categories:
+  - crypto-trading-signals
+  - mlm-recruitment
+  - forex-copy-trading
+  - payday-lending
+  - get-rich-quick-income-claims
+  - unlicensed-financial-advisory
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+top_categories:
+  - name: professional-upskilling-and-courses
+    positioning_note: "Cohort-based executive education; pricing ladder AED 497 / AED 1,997 / AED 7,997."
+  - name: ecommerce-and-luxury-dtc
+    positioning_note: "Beauty, fragrance, fashion; Arabic-first creative + founder-trust UGC; pricing AED 199 / AED 599 / AED 1,499."
+  - name: finance-and-investment-platforms
+    positioning_note: "ADGM/DFSA-regulated wrappers only; Arabic landing pages mandatory; prominent risk disclosure."
+top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest. Note: UAE is a thin-data region for public Meta ad-cost benchmarks — see data_quality_note for context."
+authoritative_sources:
+  - source_name: UAE Government — Media and Advertising
+    url: https://u.ae/en/information-and-services/business/media-and-advertising
+  - source_name: TDRA Telecom and Digital Regulations
+    url: https://tdra.gov.ae/en/home
+  - source_name: SCA Securities and Commodities Authority (Financial Promotions)
+    url: https://www.sca.gov.ae/en
