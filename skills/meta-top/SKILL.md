@@ -1,5 +1,5 @@
 ---
-name: ce-meta-top
+name: meta-top
 description: "Region-aware deep-research report on best-selling digital products in the Meta ecosystem (Facebook, Instagram, WhatsApp Business) for a specific region. Six regions in v1: india, us, ca, uk, au, ae. Optionally narrows by product category and produces an Option B actionable brief (pricing tiers, creative angles, Meta-format-compliant ad-copy templates). Use when asked for top-selling digital products on Meta, what to launch in a region, what ad creative is working, or what CPM/CPC to budget on Meta in a region."
 argument-hint: "<region: in|us|ca|uk|au|ae> [--category NAME] [--emit=html]"
 allowed-tools:
@@ -18,24 +18,24 @@ allowed-tools:
 
 **Note: The current year is 2026.** Use this when pricing examples, ad-creative patterns, and regulatory notes touch dates or recency claims.
 
-`ce-meta-top` is a region-aware deep-research skill that produces a structured six-section report on best-selling digital products in the Meta ecosystem for one of six v1 regions (India, US, Canada, UK, Australia, UAE), plus an Option B actionable brief (pricing tiers, creative angles, Meta-format-compliant ad-copy templates). Trust + ethics frame baked in: category design, not content cloning. Cloning of specific creator content is **never** the recommendation — the skill surfaces winning categories and positioning gaps so the user can build their *original* product with a sharper angle.
+`meta-top` is a region-aware deep-research skill that produces a structured six-section report on best-selling digital products in the Meta ecosystem for one of six v1 regions (India, US, Canada, UK, Australia, UAE), plus an Option B actionable brief (pricing tiers, creative angles, Meta-format-compliant ad-copy templates). Trust + ethics frame baked in: category design, not content cloning. Cloning of specific creator content is **never** the recommendation — the skill surfaces winning categories and positioning gaps so the user can build their *original* product with a sharper angle.
 
 ## SKILL CONTRACT (do not improvise)
 
-A `/ce-meta-top <region>` invocation is complete when:
+A `/meta-top <region>` invocation is complete when:
 
-1. Line 1 of the output is the badge: `📊 meta-top v{X} · region: {region} · {YYYY-MM-DD}`. `{X}` is the plugin's release-please version, NEVER a per-skill counter (per CE AGENTS.md "Release Bumping").
+1. Line 1 of the output is the badge: `📊 meta-top v{X} · region: {region} · {YYYY-MM-DD}`. `{X}` is this skill's version (currently `v1`); bump it intentionally when shipping breaking changes, never auto-increment per invocation.
 2. The six canonical sections are present in this order: (a) Market snapshot, (b) Top 5–7 product categories with local-currency pricing, (c) Winning ad creative patterns, (d) Specific product examples, (e) Meta ad cost benchmarks (CPM/CPC/CPV in the region's local currency), (f) Option B actionable brief.
 3. Every price reference is in the region's local currency (₹ / $ / CAD / £ / AUD / AED). USD is permitted as a secondary annotation only when ground-truth sources report USD (rare); never silently convert.
 4. Every citation is inline `[name](url)` markdown. **No raw URLs. No trailing Sources block. No broken empty `[]()` links.** URLs use `http://` or `https://`; `javascript:`, `data:`, `file:` are rejected.
 5. Regulatory notes for the region are surfaced explicitly (never silently dropped). At least one para or blockquote per output cites the regulatory body (ASCI for India, FTC for US, ASA for UK, AANA for AU, Ad Standards + CRTC for CA, NMC + TRA for UAE).
 6. A trust + ethics one-liner appears under Option B: **"Category design, not content cloning. Find a proven category, identify a positioning gap, create YOUR original product, position with a USP, test small-budget Meta ads, scale what works."**
 7. `data_freshness_note` and `data_quality_note` appear under Section (b) when the live research surfaces thin data or rate-limit / partial-research conditions. Honest caveats are load-bearing output, not optional polish.
-8. After Option B, a post-menu is presented inline via the platform's blocking question tool with these four options: (1) drill into a specific category with a follow-up `/ce-meta-top <region> --category=<name>`, (2) save a self-contained HTML brief via `--emit=html`, (3) export the Option B creative pack as a paste-ready Markdown block, (4) done for now. Routing for each option lives inline in this SKILL.md, never in `references/` (per `post-menu-routing-belongs-inline` learning, issue #714).
+8. After Option B, a post-menu is presented inline via the platform's blocking question tool with these four options: (1) drill into a specific category with a follow-up `/meta-top <region> --category=<name>`, (2) save a self-contained HTML brief via `--emit=html`, (3) export the Option B creative pack as a paste-ready Markdown block, (4) done for now. Routing for each option lives inline in this SKILL.md, never in `references/` (per the `post-menu-routing-belongs-inline` learning — keep routing discoverable in the loaded skill, not in a file the loader may not pick up).
 
 ## VOICE CONTRACT
 
-These rules apply to every `/ce-meta-top` output regardless of region:
+These rules apply to every `/meta-top` output regardless of region:
 
 - **Badge first.** Line 1 is the badge. No blank lines before it. No preamble.
 - **Show, don't summarize, the citations.** Every claim with a sourced fact carries inline `[name](url)`. Sub-bullet for the strongest citation; secondary sources in same citation cluster as `[src1](url1), [src2](url2)`.
@@ -45,6 +45,19 @@ These rules apply to every `/ce-meta-top` output regardless of region:
 - **Disclose uncertainty.** Thin-data regions (UAE, sometimes Canada) carry a `data_quality_note` rather than fabricated benchmarks. The Option B brief must contain at least one pricing tier labeled `pricing_tier_source: observed`; otherwise show `category-pricing-research-required` notice and skip the brief.
 - **Format compliance is visible.** Ad-copy templates in Option B show the format constraints inline (FB primary text ≤125 chars, headline ≤40 chars, IG Reels 9:16 vertical, WA status 24h ephemeral) so the user sees the limits when they reach for the template.
 - **No raw URLs, ever.** A URL only appears wrapped in `[name](url)` markdown. Stand-alone URLs in plain text are a defect.
+
+## Reliability: source ladder (v1.1+)
+
+When the host's WebSearch tool is unavailable or returns empty payloads, meta-top does NOT fail outright. The sub-agent walks a transparent 4-tier source ladder. Each tier is fall-through; the next tier only fires when the previous returned < 5 sources (US/IN) or < 3 sources (others).
+
+1. **Host-native WebSearch** — primary tier.
+2. **Keyless DDG/SearXNG** — `scripts/keyless_search.py "QUERY" --count 5`. Stdlib-only, no API keys, no recurring cost. Mirrors last30days's `web_search_keyless.py` pattern.
+3. **Curated `top_brands`** — direct WebFetch to each brand-domain URL in `references/regions/<region>.yaml`'s `top_brands` list. Cap at 4 fetches; skip any URL that 403s/404s.
+4. **Curated anchors only** — final fallback. Brief still ships; `data_quality_note` flags the limitation transparently.
+
+When tier 2 or 3 contributes any source, `partial_research: true` and the `data_quality_note` records which tier filled the gap (e.g., `"Ladder tier 2 contributed 4 sources after WebSearch returned 0."`).
+
+This was added in v1.1 after the v1 smoke-test surfaced WebSearch's empty-payload failure mode (2-of-3 sub-agent runs hit it; tier 2 closed the gap via WebFetch fallback; tier 3 is the same fix routed through a stable Python entry point).
 
 ## Step 0: Pre-Flight
 
@@ -79,11 +92,11 @@ The regulatory body's one-line summary must be the rule of thumb the user needs 
 
 Dispatch the curated-region-aware research primitive. Use the platform's Agent tool with sub-agent delegation.
 
-Dispatch the agent at `references/agents/ce-meta-top-researcher.md` (loaded via the Skill tool: `Skill("ce-meta-top-researcher")` if available, otherwise pass `READ` instructions). The agent reads the region's curated YAML anchors and runs live research.
+Dispatch the agent at `references/agents/meta-top-researcher.md` (loaded via the Skill tool: `Skill("meta-top-researcher")` if available, otherwise pass `READ` instructions). The agent reads the region's curated YAML anchors and runs live research.
 
-**Pass only the path**, not the YAML content. Per `pass-paths-not-content-to-subagents` learning: orchestrator hands the sub-agent `<absolute path to skills/ce-meta-top/references/regions/<region>.yaml>`; sub-agent reads what it needs.
+**Pass only the path**, not the YAML content. Per `pass-paths-not-content-to-subagents` learning: orchestrator hands the sub-agent `<absolute path to skills/meta-top/references/regions/<region>.yaml>`; sub-agent reads what it needs.
 
-The agent returns a structured JSON digest (schema lives in `references/agents/ce-meta-top-researcher.md`).
+The agent returns a structured JSON digest (schema lives in `references/agents/meta-top-researcher.md`).
 
 ## Step 2: Present Six-Section Synthesis
 
@@ -114,7 +127,7 @@ Three levels in local currency, each with a positioning hint:
 
 At least one tier must come from observed live research (`pricing_tier_source: observed`). If no tier clears the bar, show:
 
-`> category-pricing-research-required — at least one observed pricing example is required before the brief ships. Run \`/ce-meta-top <region> --category=<name>\` after manually observing pricing for the target category.`
+`> category-pricing-research-required — at least one observed pricing example is required before the brief ships. Run \`/meta-top <region> --category=<name>\` after manually observing pricing for the target category.`
 
 The three tiers ladder from "loss-leader checkout" → "core offer" → "anchor / upsell". Localize the positioning hint per region.
 
@@ -170,12 +183,12 @@ Always rendered as a blockquote immediately before the post-menu:
 
 After Option B, present a numbered menu via the platform's blocking question tool (`AskUserQuestion` in Claude Code). Four options:
 
-1. **Drill into a category** — user supplies a category name; orchestrator re-dispatches the sub-agent with `--category=<name>`. Use `Skill("ce-meta-top", "<region> --category=<name>")` or re-invoke via the Agent tool with a narrowed dispatch payload.
+1. **Drill into a category** — user supplies a category name; orchestrator re-dispatches the sub-agent with `--category=<name>`. Use `Skill("meta-top", "<region> --category=<name>")` or re-invoke via the Agent tool with a narrowed dispatch payload.
 2. **Save HTML brief** — produces a self-contained `<root>/meta-top-reports/<region>-<YYYY-MM-DD>.html` document mirroring the chat output (per `--emit=html` flow; shares renderer invariants with last30days HTML brief).
 3. **Export creative pack** — writes a paste-ready Markdown block of the Option B brief (pricing tiers + creative angles + ad-copy templates) to chat so the user can paste directly into their authoring tool.
 4. **Done for now** — ends the session with no further action.
 
-Routing for each option lives inline in this SKILL.md — never in `references/` (issue #714 failure pattern). If `AskUserQuestion` errors or is unavailable, fall back to a numbered list in chat with the same four options.
+Routing for each option lives inline in this SKILL.md — never in `references/` (the `post-menu-routing-belongs-inline` learning: routing placed in a `references/` file is not discoverable by the platform's blocking question tool). If `AskUserQuestion` errors or is unavailable, fall back to a numbered list in chat with the same four options.
 
 ## Pre-Flight Failure Modes
 
@@ -192,7 +205,7 @@ v1 regions: india, us, ca, uk, au, ae.
 
 For regions outside v1, try:
 - `/last30days <region>` — time-windowed cross-source research, region-agnostic.
-- File an upstream issue requesting v2 support (link to docs/guides/ce-meta-top.md once shipped).
+- File an upstream issue requesting v2 support (link to docs/guides/meta-top.md once shipped).
 
 Stopping without dispatch.
 ```
@@ -201,7 +214,7 @@ Stopping without dispatch.
 
 When the same region + category combination has been called in the last 3 invocations (lightweight dedupe against chat history; if no record exists, skip silently), surface:
 
-> **Heads up** — `/ce-meta-top <region> --category=<name>` was last called {N} invocations ago. Pricing may have shifted. Live research will still run.
+> **Heads up** — `/meta-top <region> --category=<name>` was last called {N} invocations ago. Pricing may have shifted. Live research will still run.
 
 ### Region-mismatch detection
 
@@ -223,7 +236,7 @@ If a region's `format_constraints` declare, e.g., that financial products in UAE
 
 To prevent scope creep:
 
-- **No bundled Python script** in v1. All live-data work happens inside the sub-agent via WebSearch/WebFetch. A bundled script can be added later (v1.5) if Meta Ad Library rate limits or repeat-data volume justify it.
+- **No bundled Python script** in v1's main path. All live-data work happens inside the sub-agent via WebSearch/WebFetch. **v1.1 lifts this rule scoped to a floor-tier keyless DDG fallback only** — `scripts/lib/web_search_keyless.py` + `scripts/keyless_search.py` mirror last30days's `web_search_keyless.py` pattern (stdlib-only, no API keys, no recurring cost). The sub-agent uses it as tier 2 of the source ladder, never as a Python replacement for the host's WebSearch. Broader paid-search Python fallbacks (Brave / Serper / SerpAPI / Exa) remain out of scope until v1.5+.
 - **No `--last=N`** time-window flag. The skill is a snapshot, not a trend.
 - **No `--category=<name>` overlap with `--emit=html`** is allowed; both flags are orthogonal.
 - **No multi-language output** in v1. English only.

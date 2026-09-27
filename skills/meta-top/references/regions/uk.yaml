@@ -38,3 +38,28 @@ authoritative_sources:
     url: https://ico.org.uk/for-organisations/direct-marketing-and-fundraising/direct-marketing-guidance-direct-marketing-and-privacy-and-electronic-communications-regulations/
   - source_name: FCA Financial Promotions on Social Media
     url: https://www.fca.org.uk/publications/policy-statements/ps23-6-financial-promotions-social-media
+top_brands:
+  - name: Monzo
+    url: https://monzo.com
+    primary_category: finance-and-investing-platforms
+  - name: Revolut
+    url: https://www.revolut.com
+    primary_category: finance-and-investing-platforms
+  - name: Gymshark
+    url: https://www.gymshark.com
+    primary_category: home-and-lifestyle-ecommerce
+  - name: Brewdog
+    url: https://www.brewdog.com
+    primary_category: home-and-lifestyle-ecommerce
+  - name: Charlotte Tilbury
+    url: https://www.charlottetilbury.com
+    primary_category: home-and-lifestyle-ecommerce
+  - name: DECIEM (The Ordinary)
+    url: https://deciem.com
+    primary_category: home-and-lifestyle-ecommerce
+  - name: ASA
+    url: https://www.asa.org.uk/codes-and-rulings/advertising-codes/non-broadcast-code.html
+    primary_category: regulatory
+  - name: FCA Financial Promotions
+    url: https://www.fca.org.uk/publications/policy-statements/ps23-6-financial-promotions-social-media
+    primary_category: regulatory

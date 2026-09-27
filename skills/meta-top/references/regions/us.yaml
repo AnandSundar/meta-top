@@ -38,3 +38,28 @@ authoritative_sources:
     url: https://www.ftc.gov/sites/default/files/fta_statutes/16-cfr-part-255-endorsement-guides.pdf
   - source_name: FDA Health Claims in Advertising
     url: https://www.fda.gov/food/food-labeling-nutrition
+top_brands:
+  - name: Stripe
+    url: https://stripe.com
+    primary_category: saas-and-productivity-tools
+  - name: Shopify
+    url: https://www.shopify.com
+    primary_category: saas-and-productivity-tools
+  - name: Athletic Greens (AG1)
+    url: https://athleticgreens.com
+    primary_category: health-wellness-subscriptions
+  - name: Klaviyo
+    url: https://www.klaviyo.com
+    primary_category: saas-and-productivity-tools
+  - name: Liquid Death
+    url: https://liquiddeath.com
+    primary_category: ecommerce-bundles-and-dtc
+  - name: Bombas
+    url: https://bombas.com
+    primary_category: ecommerce-bundles-and-dtc
+  - name: FTC Endorsement Guides
+    url: https://www.ftc.gov/sites/default/files/fta_statutes/16-cfr-part-255-endorsement-guides.pdf
+    primary_category: regulatory
+  - name: FDA Health Claims in Advertising
+    url: https://www.fda.gov/food/food-labeling-nutrition
+    primary_category: regulatory

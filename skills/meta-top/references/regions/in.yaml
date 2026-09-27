@@ -39,3 +39,25 @@ authoritative_sources:
     url: https://www.meity.gov.in/content/information-technology-intermediary-guidelines-and-digital-media-ethics-code-rules-2021
   - source_name: RBI Master Directions on Digital Lending
     url: https://www.rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12143
+top_brands:
+  - name: Mamaearth
+    url: https://mamaearth.in
+    primary_category: beauty-and-personal-care
+  - name: boAt
+    url: https://www.boat-lifestyle.com
+    primary_category: consumer-electronics-and-audio
+  - name: PhonePe
+    url: https://www.phonepe.com
+    primary_category: fintech-and-payments
+  - name: upGrad
+    url: https://www.upgrad.com
+    primary_category: edtech-and-courses
+  - name: Unacademy
+    url: https://www.unacademy.com
+    primary_category: edtech-and-courses
+  - name: ASCI Code
+    url: https://www.ascionline.in/the-asci-code/
+    primary_category: regulatory
+  - name: MeitY IT Rules 2021
+    url: https://www.meity.gov.in/content/information-technology-intermediary-guidelines-and-digital-media-ethics-code-rules-2021
+    primary_category: regulatory

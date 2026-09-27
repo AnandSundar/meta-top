@@ -9,7 +9,7 @@ You do not modify any file. You return JSON to stdout. The orchestrator renders 
 A call to you looks like:
 
 ```
-Skill("ce-meta-top-researcher", "<absolute path to skills/ce-meta-top/references/regions/<region>.yaml> [--category=<name>]")
+Skill("meta-top-researcher", "<absolute path to skills/meta-top/references/regions/<region>.yaml> [--category=<name>]")
 ```
 
 (Or via the Agent tool with a similar prompt containing the region config path.)
@@ -58,7 +58,31 @@ Run WebSearch queries per the canonical source categories. For each region, the 
 
 Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation.
 
+**Ladder fallback (v1.1+):** if the WebSearch total is **< 5** for US/IN, or **< 3** for CA/UK/AU/AE, walk the source ladder described in **Step 3.0** below — invoke tier 2 (Bash into `scripts/keyless_search.py`) for the top 2 queries, then tier 3 (WebFetch curated `top_brands` URLs from the region YAML). Cap total sources across all tiers at **8**. Set `partial_research: true` whenever tier 2 or 3 contributes ≥1 source.
+
 On a 429 or rate-limit response, retry with exponential backoff (max 2 retries). If still rate-limited after 2 retries, continue with remaining sources and set `partial_research: true`, `rate_limit_hit: true` in the digest's metadata.
+
+### Step 3.0 — Source ladder (v1.1+, mirrors last30days's `web_search_keyless.py` pattern)
+
+When the host's WebSearch tool is unavailable or returns empty payloads across most queries, transparently use the keyless DDG floor before reaching the no-data state. This mirrors `last30days`'s `web_search_keyless.py` pattern: stdlib-only DuckDuckGo HTML endpoint + optional SearXNG fallback.
+
+**Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
+
+1. **WebSearch tool** — host-native search. Highest-quality tier; always try first.
+2. **Bash into Python `scripts/keyless_search.py`** — invoke the bundled keyless floor:
+   ```
+   python "<skill-root>/scripts/keyless_search.py" "QUERY" --count 5
+   ```
+   - Reads `META_TOP_SEARXNG_URL` env (or `--searxng-url <url>` flag) to enable the SearXNG rung when DDG returns 0.
+   - Outputs JSON to stdout: `{"results": [...], "artifact": {"keyless_backend", "result_count", "reason?"}}`.
+   - Exit code `0` = ≥1 result; exit code `2` = zero results.
+   - Top 2 queries from the seed list above are sufficient; more queries wastes capacity.
+3. **WebFetch curated `top_brands` URLs** from `references/regions/<region>.yaml`'s `top_brands` list (4–6 brand-domain URLs per region; cap at **4** WebFetch calls to keep within the 20-call ceiling). Skip any URL that 403s/404s. Brand URLs are stable landing pages (mamaearth.in, boat-lifestyle.com, etc.) so they survive subdomain migrations better than Ad-Library-specific pages.
+4. **Curated-only digest** — final fallback: emit a digest using the region YAML's `top_categories` with `pricing_examples: []`, and append `"data_quality_note": "WebSearch and keyless floor both returned 0 results; brief uses curated anchors only."` Continue to Step 4.
+
+**Transparency rule:** when tier 2 or 3 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after WebSearch returned <M>."` Do not silently substitute.
+
+**Scope ceiling:** ≤8 total sources across all tiers; ≤20 total WebFetch calls across the whole invocation (seed queries + tier 3 brand fetches).
 
 ### Step 3b — Filter
 

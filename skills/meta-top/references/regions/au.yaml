@@ -38,3 +38,28 @@ authoritative_sources:
     url: https://www.acma.gov.au/advertising
   - source_name: OAIC Privacy Act 1988 (Australian Privacy Principles)
     url: https://www.oaic.gov.au/privacy/privacy-legislation/the-privacy-act
+top_brands:
+  - name: Canva
+    url: https://www.canva.com
+    primary_category: saas-and-productivity-tools
+  - name: Afterpay (Block)
+    url: https://www.afterpay.com
+    primary_category: finance-and-investing-platforms
+  - name: Kogan
+    url: https://www.kogan.com
+    primary_category: home-and-lifestyle-ecommerce
+  - name: Aesop
+    url: https://www.aesop.com/au
+    primary_category: home-and-lifestyle-ecommerce
+  - name: Blackmores
+    url: https://www.blackmores.com.au
+    primary_category: health-wellness-subscriptions
+  - name: LSKD
+    url: https://www.lskd.com.au
+    primary_category: home-and-lifestyle-ecommerce
+  - name: AANA Code of Ethics
+    url: https://aana.com.au/code-of-ethics/
+    primary_category: regulatory
+  - name: OAIC
+    url: https://www.oaic.gov.au/privacy/privacy-legislation/the-privacy-act
+    primary_category: regulatory

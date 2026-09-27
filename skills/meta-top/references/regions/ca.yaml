@@ -38,3 +38,28 @@ authoritative_sources:
     url: https://crtc.gc.ca/eng/home.htm
   - source_name: Quebec Charter of the French Language (Bill 101)
     url: https://www.quebec.ca/en/government/quebec-charter-french-language
+top_brands:
+  - name: Shopify (CA)
+    url: https://www.shopify.com/ca
+    primary_category: saas-and-productivity-tools
+  - name: Wealthsimple
+    url: https://www.wealthsimple.com
+    primary_category: finance-and-investing-platforms
+  - name: Ritual
+    url: https://ritual.com
+    primary_category: ecommerce-bundles-and-dtc
+  - name: Mejuri
+    url: https://mejuri.com
+    primary_category: ecommerce-bundles-and-dtc
+  - name: Frank And Oak
+    url: https://www.frankandoak.com
+    primary_category: ecommerce-bundles-and-dtc
+  - name: SkipTheDishes
+    url: https://www.skipthedishes.com
+    primary_category: ecommerce-bundles-and-dtc
+  - name: Ad Standards Canada
+    url: https://adstandards.ca/code/
+    primary_category: regulatory
+  - name: CRTC
+    url: https://crtc.gc.ca/eng/home.htm
+    primary_category: regulatory
