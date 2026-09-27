@@ -1,0 +1,10 @@
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Local secrets / config
+.env
+.env.local
