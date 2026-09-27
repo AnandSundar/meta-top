@@ -30,6 +30,25 @@ top_categories:
     positioning_note: "Free-tier funnels, then annual plans; positioning on speed-to-value and integrations."
   - name: health-wellness-subscriptions
     positioning_note: "Telehealth + supplement DTC; before-after + testimonial hooks; subscription anchors with first-month discount."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} US active running 90 days"
+    - "{category} US Meta ad still running since months longevity"
+  variants:
+    - "{category} US Meta ads advertiser variants count scaling"
+    - "{category} US Meta ads 20+ variants scaling winning"
+  cross_country:
+    - "{category} US UK CA AU Meta ads cross-country rollout"
+    - "{category} US Meta ads global regional scaling proven"
+  engagement:
+    - "{category} US Reddit r/Entrepreneur r/SaaS buying intent comments"
+    - "{category} US Meta ads comments link please refund policy"
+  marketplace:
+    - "{category} US Gumroad Etsy trending tags 2026"
+    - "{category} US Product Hunt G2 rising digital"
+  pain_signal:
+    - "{category} US Reddit r/Entrepreneur r/SaaS desperate tone"
+    - "{category} US Quora question repeated demand waiting"
 top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
 authoritative_sources:
   - source_name: FTC Advertising and Marketing

@@ -30,6 +30,25 @@ top_categories:
     positioning_note: "Health, beauty, home goods bundle DTC; price ladder CAD $29 / CAD $69 / CAD $149."
   - name: saas-and-productivity-tools
     positioning_note: "Annual plans with pro-rated USD parity; positioning on speed-to-value and team-size scaling."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} Canada active running 90 days"
+    - "{category} Canada Meta ad still running since months longevity"
+  variants:
+    - "{category} Canada Meta ads advertiser variants count scaling"
+    - "{category} Canada Meta ads 20+ variants scaling winning"
+  cross_country:
+    - "{category} Canada US UK Meta ads cross-country rollout"
+    - "{category} Canada Meta ads US scaling into Canada"
+  engagement:
+    - "{category} Canada r/canada Reddit comments buying intent"
+    - "{category} Canada Facebook Group comments link please refund policy"
+  marketplace:
+    - "{category} Canada Etsy Gumroad trending tags 2026"
+    - "{category} Canada Shopify digital product rising"
+  pain_signal:
+    - "{category} Canada r/canada r/PersonalFinanceCanada pain point desperate"
+    - "{category} Canada Quora question repeated demand waiting"
 top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest. Note: live research on this region occasionally surfaces thinner ad-cost data than US — see data_quality_note."
 authoritative_sources:
   - source_name: Ad Standards Canada Code

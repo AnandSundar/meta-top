@@ -55,8 +55,13 @@ Run WebSearch queries per the canonical source categories. For each region, the 
 - `<region> top Meta ads digital products 2026`
 - `<region> Meta ads case study ecommerce saas course`
 - `site:linkedin.com <region> Meta ads head of growth 2026`
+- **v1.3 (winning-product framework, additional 4 queries):**
+- `<region> <category> site:facebook.com/ads/library running since 90 days` — **longevity** signal (ad age)
+- `<region> <category> advertiser variants count Meta ads scaling` — **variants** signal (5–10 / 20+ thresholds)
+- `<region> <category> Meta ads US UK CA AU running cross-country` — **cross_country** signal (1 / 2–3 / 5+ countries)
+- `<region> <category> reddit r/Entrepreneur r/SaaS pain point` — **pain_signal** signal (few / repeated / desperate tone)
 
-Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation.
+Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation. The 4 v1.3 winning-product queries fit within the existing 8-source ceiling; do not exceed it.
 
 **Ladder fallback (v1.1+):** if the WebSearch total is **< 5** for US/IN, or **< 3** for CA/UK/AU/AE, walk the source ladder described in **Step 3.0** below — invoke tier 2 (Bash into `scripts/keyless_search.py`) for the top 2 queries, then tier 3 (WebFetch curated `top_brands` URLs from the region YAML). Cap total sources across all tiers at **8**. Set `partial_research: true` whenever tier 2 or 3 contributes ≥1 source.
 
@@ -106,6 +111,29 @@ Record each exclusion in `filtered_patterns`:
 
 The orchestrator surfaces excluded patterns in the output footer so the user sees the trust + ethics boundary.
 
+### Step 3c — Signal Extraction (v1.3 winning-product framework)
+
+For each `top_categories[]` entry, classify each of the six signals by running the region YAML's `signal_seeds{}` queries (substitute `{category}` with the category name) and inferring from the returned sources. Each signal produces a `sub_score` (0 / partial / max), an `evidence_urls[]` list (≥1 cited URL required; ≥2 preferred for `confidence: high`), and a `confidence` rating (high / medium / low) based on evidence depth.
+
+**Sub-score thresholds (per category, per signal):**
+
+| Signal | 0 | partial | max |
+|---|---|---|---|
+| `longevity` | no ads seen running | 30+ days running → 2 | 90+ days running → 3 |
+| `variants` | <3 variants from one advertiser | 5–10 variants → 2 | 20+ variants → 3 |
+| `cross_country` | 1 country | 2–3 countries → 1 | 5+ countries → 2 |
+| `engagement` | low / no buying-intent comments | moderate → 1 | high buying-intent ("link please?", refund-policy questions) → 2 |
+| `marketplace` | flat / declining on Gumroad/Topmate | stable → 1 | rising 50%+ → 2 |
+| `pain_signal` | few Reddit/Quora/FB-Group mentions | repeated → 1 | desperate tone ("I wish someone would...") → 2 |
+
+Sum the six sub-scores → `winning_score.total` (max 14). Band: `9+` = `strong_bet`, `6–8` = `promising`, `<6` = `skip`.
+
+**Underground signals (qualitative, not scored):** also populate `underground_signals[]` for any of these observed in the research: scarcity working (sold-out → back-again), refund-policy comment questions (high purchase-intent), specificity ("made ₹X in Y days"), creator-collab-to-paid (organic reshared as ad), 1% lookalike audience hint. Each entry: `{ kind, observation, evidence_url }`. Empty array when none observed.
+
+When a region has thin data (< 5 sources), emit `winning_score` anyway with `confidence: low` for signals lacking ≥1 cited URL — `winning_score.total` reflects the sum regardless, fail-soft, not fail-closed.
+
+**Source ladder ordering:** the 4 v1.3 queries share the existing 8-source ceiling with the 6 canonical Step 3 queries. The region YAML's `signal_seeds{}` block (added in v1.3) provides region-specific phrasing — read it from the YAML and substitute `{category}` at query time. Do not add more than 4 winning-product queries per category even if the YAML has more seeds; prioritize the ones the evidence demands.
+
 ### Step 4 — Classify and structure JSON
 
 Emit a single JSON object to stdout matching the schema below. All currency values are in the region's local currency. Dates are ISO `YYYY-MM-DD`. URL fields use `http://` or `https://` only; reject any URL using `javascript:`, `data:`, or `file:`.
@@ -138,7 +166,23 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
         }
       ],
       "evidence_urls": ["<URL>", "<URL>"],
-      "replaced_curated_seed": false
+      "replaced_curated_seed": false,
+      "winning_signals": {
+        "longevity":    { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "variants":      { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "cross_country": { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "engagement":    { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "marketplace":   { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "pain_signal":   { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" }
+      },
+      "winning_score": {
+        "total": 0,
+        "band": "strong_bet|promising|skip",
+        "computed_at": "<YYYY-MM-DD>"
+      },
+      "underground_signals": [
+        { "kind": "scarcity_working|refund_policy_questions|specificity|creator_collab_to_paid|lookalike_1pct_hint", "observation": "<text>", "evidence_url": "<URL>" }
+      ]
     }
   ],
   "ad_patterns": [

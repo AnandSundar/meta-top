@@ -31,6 +31,25 @@ top_categories:
     positioning_note: "RBI-licensed products carry trust; cashback and reward mechanics convert against UPI rails."
   - name: beauty-and-personal-care
     positioning_note: "D2C brands scale on Meta with UGC + before-after hooks; price ladder ₹199/₹499/₹999."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} India active running 90 days"
+    - "{category} India Meta ad still running since months longevity"
+  variants:
+    - "{category} India Meta ads advertiser variants count scaling"
+    - "{category} India Meta ads 20+ variants scaling winning"
+  cross_country:
+    - "{category} India UK US Meta ads running cross-country"
+    - "{category} India Meta ads global rollout regional"
+  engagement:
+    - "{category} India Reddit r/IndianInvesting r/developersIndia buying intent"
+    - "{category} India Facebook Group comments link please refund policy"
+  marketplace:
+    - "{category} India Topmate Instamojo Gumroad rising tags"
+    - "Topmate {category} India top creators revenue monthly"
+  pain_signal:
+    - "{category} India pain point r/india r/IndianGaming desperate"
+    - "{category} India Quora question repeated demand waiting"
 top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
 authoritative_sources:
   - source_name: ASCI Code (Self-Regulation)

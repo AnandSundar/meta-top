@@ -66,8 +66,13 @@ Run WebSearch queries per the canonical source categories **for digital template
 - `site:facebook.com/ads/library <region> digital download` — Meta Ad Library, narrowed to digital-download creatives
 - `<region> <regulatory body short name> 2026 advertising guidelines` — regulatory anchor (unchanged)
 - `<region> Meta CPM benchmark 2026` — cost benchmark anchor (unchanged)
+- **v1.3 (winning-product framework, additional 4 queries for digital templates / downloads):**
+- `<region> <digital-category> site:facebook.com/ads/library running since 90 days` — **longevity** signal (ad age for the digital-template creator)
+- `<region> <digital-category> Gumroad Notion creator variants count Meta ads scaling` — **variants** signal (5–10 / 20+ thresholds on template/prompt ads)
+- `<region> <digital-category> Meta ads US UK CA AU running cross-country` — **cross_country** signal (1 / 2–3 / 5+ countries where the same template ad is running)
+- `<region> <digital-category> reddit r/Notion r/Entrepreneur pain point` — **pain_signal** signal (few / repeated / desperate tone in r/Notion, r/Entrepreneur, r/SaaS, r/freelance)
 
-Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation.
+Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation. The 4 v1.3 winning-product queries fit within the existing 8-source ceiling; do not exceed it.
 
 **Ladder fallback (v1.1+, mirrors meta-top v1.1):** if the WebSearch total is **< 5** for US/IN, or **< 3** for CA/UK/AU/AE, walk the source ladder described in **Step 3.0** below — invoke tier 2 (Bash into `scripts/keyless_search.py`) for the top 2 queries, then tier 3 (WebFetch curated **`digital_marketplaces`** URLs from the region YAML). Cap total sources across all tiers at **≤8** (matching meta-top v1.1 line 85 — do not regress to a strict-less-than off-by-one). Set `partial_research: true` whenever tier 2 or 3 contributes ≥1 source.
 
@@ -128,6 +133,29 @@ Record each exclusion in `filtered_patterns`:
 
 The orchestrator surfaces excluded patterns in the output footer so the user sees the trust + ethics boundary.
 
+### Step 3c — Signal Extraction (v1.3 winning-product framework, digital-template phrasing)
+
+For each `top_categories[]` entry, classify each of the six signals by running the region YAML's `signal_seeds{}` queries (substitute `{category}` with the digital-category name) and inferring from the returned sources. Each signal produces a `sub_score` (0 / partial / max), an `evidence_urls[]` list (≥1 cited URL required; ≥2 preferred for `confidence: high`), and a `confidence` rating (high / medium / low) based on evidence depth.
+
+**Sub-score thresholds (per digital category, per signal):**
+
+| Signal | 0 | partial | max |
+|---|---|---|---|
+| `longevity` | no ads seen running | 30+ days running → 2 | 90+ days running → 3 |
+| `variants` | <3 variants from one advertiser | 5–10 variants → 2 | 20+ variants → 3 |
+| `cross_country` | 1 country | 2–3 countries → 1 | 5+ countries → 2 |
+| `engagement` | low / no buying-intent comments | moderate → 1 | high buying-intent ("link please?", refund-policy questions) → 2 |
+| `marketplace` | flat / declining on Gumroad / Etsy / Notion / Canva Creators / Instamojo | stable → 1 | rising 50%+ → 2 |
+| `pain_signal` | few Reddit / Quora / FB-Group mentions | repeated → 1 | desperate tone ("I wish someone would...") → 2 |
+
+Sum the six sub-scores → `winning_score.total` (max 14). Band: `9+` = `strong_bet`, `6–8` = `promising`, `<6` = `skip`.
+
+**Underground signals (qualitative, not scored):** also populate `underground_signals[]` for any of these observed in the research (digital-template phrasing): scarcity_working (Notion template "sold out → back again"), refund_policy_questions (comment threads asking about refund policy on a digital-template purchase page), specificity (creator stating exact revenue numbers like "made ₹4L/month on Notion templates"), creator_collab_to_paid (UGC reshare from a popular creator re-launched as a paid ad for the template), lookalike_1pct_hint (evidence a brand is running 1% lookalike audiences for a digital pack — they have buyers and are scaling). Each entry: `{ kind, observation, evidence_url }`. Empty array when none observed.
+
+When a region has thin data (< 5 sources), emit `winning_score` anyway with `confidence: low` for signals lacking ≥1 cited URL — `winning_score.total` reflects the sum regardless, fail-soft, not fail-closed.
+
+**Source ladder ordering:** the 4 v1.3 queries share the existing 8-source ceiling with the 7 canonical Step 3 queries. The region YAML's `signal_seeds{}` block (added in v1.3) provides region-specific phrasing — read it from the YAML and substitute `{category}` at query time. Do not add more than 4 winning-product queries per category even if the YAML has more seeds; prioritize the ones the evidence demands.
+
 ### Step 4 — Classify and structure JSON
 
 Emit a single JSON object to stdout matching the schema below. All currency values are in the region's local currency. Dates are ISO `YYYY-MM-DD`. URL fields use `http://` or `https://` only; reject any URL using `javascript:`, `data:`, or `file:`.
@@ -160,7 +188,23 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
         }
       ],
       "evidence_urls": ["<URL>", "<URL>"],
-      "replaced_curated_seed": false
+      "replaced_curated_seed": false,
+      "winning_signals": {
+        "longevity":    { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "variants":      { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "cross_country": { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "engagement":    { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "marketplace":   { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" },
+        "pain_signal":   { "sub_score": 0, "evidence_urls": ["<URL>"], "confidence": "high|medium|low" }
+      },
+      "winning_score": {
+        "total": 0,
+        "band": "strong_bet|promising|skip",
+        "computed_at": "<YYYY-MM-DD>"
+      },
+      "underground_signals": [
+        { "kind": "scarcity_working|refund_policy_questions|specificity|creator_collab_to_paid|lookalike_1pct_hint", "observation": "<text>", "evidence_url": "<URL>" }
+      ]
     }
   ],
   "ad_patterns": [
@@ -211,7 +255,7 @@ JSON-schema note: the YAML-side anchor field `digital_categories` maps onto the 
 Always include `data_freshness_note` and `data_quality_note`. Honest caveats are load-bearing output:
 
 - `data_freshness_note` — what time window the observed ads cover (e.g., "Ads active in the last 60 days as of 2026-09-27").
-- `data_quality_note` — honest signal on source depth, region-specific gaps, rate-limit impact, and the **`category-pricing-research-required`** trigger if it fires.
+- `data_quality_note` — honest signal on source depth, region-specific gaps, rate-limit impact, and the **`category-pricing-research-required`** trigger if it fires. v1.3 also surfaces `winning_score` confidence distribution here when the region has thin data: e.g., `winning_score confidence: low for 4 of 6 signals (longevity, variants, cross_country, pain_signal)` — tells the orchestrator to render `confidence: low` next to the rubric line for that category.
 
 At least one pricing example in `top_categories[*].pricing_examples` must carry `"pricing_tier_source": "observed"` before the orchestrator is allowed to ship the Option B brief as concrete tiers. If none clears the bar, still include `top_categories` with `pricing_examples: []` and append a `category-pricing-research-required` line into `data_quality_note`.
 

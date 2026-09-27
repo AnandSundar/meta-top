@@ -40,6 +40,25 @@ digital_categories:
     positioning_note: "Canva / Instagram template packs for SMBs and creators; ₹199–₹999 with commercial license upsell."
   - name: ebook-bundles-and-printables
     positioning_note: "Downloadable guides, workbooks, wall art, life-planner PDFs; ₹99–₹599 loss-leader to ₹1,999 bundle."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} India active running 90 days"
+    - "{category} India Meta ad still running since months longevity digital"
+  variants:
+    - "{category} India Gumroad Notion creator variants count Meta ads scaling"
+    - "{category} India Meta ads 20+ variants scaling winning digital"
+  cross_country:
+    - "{category} India UK US Meta ads running cross-country digital"
+    - "{category} India Meta ads global rollout regional digital"
+  engagement:
+    - "{category} India Reddit r/Notion r/Entrepreneur buying intent"
+    - "{category} India Facebook Group comments link please refund policy"
+  marketplace:
+    - "{category} India Gumroad Instamojo Canva Creators rising tags"
+    - "Topmate {category} India top creators revenue monthly digital"
+  pain_signal:
+    - "{category} India pain point r/india r/IndianGaming desperate"
+    - "{category} India Quora question repeated demand waiting digital"
 digital_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
 authoritative_sources:
   - source_name: ASCI Code (Self-Regulation)

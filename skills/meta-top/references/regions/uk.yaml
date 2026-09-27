@@ -30,6 +30,25 @@ top_categories:
     positioning_note: "FCA-regulated wrappers only; ISA / pension-led ad copy; disclose risk prominently."
   - name: home-and-lifestyle-ecommerce
     positioning_note: "DTC bundles, subscription anchors; founder-led UGC carries trust in a post-COVID commerce market."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} UK active running 90 days"
+    - "{category} UK Meta ad still running since months longevity"
+  variants:
+    - "{category} UK Meta ads advertiser variants count scaling"
+    - "{category} UK Meta ads 20+ variants scaling winning"
+  cross_country:
+    - "{category} UK US AU Meta ads cross-country rollout"
+    - "{category} UK Meta ads global regional scaling proven"
+  engagement:
+    - "{category} UK r/UKPersonalFinance r/unitedkingdom buying intent"
+    - "{category} UK Facebook Group comments link please refund policy"
+  marketplace:
+    - "{category} UK Gumroad Etsy UK trending tags 2026"
+    - "{category} UK Product Hunt rising digital 2026"
+  pain_signal:
+    - "{category} UK r/AskUK r/UKBusiness pain point desperate"
+    - "{category} UK Quora question repeated demand waiting"
 top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
 authoritative_sources:
   - source_name: ASA CAP Code (Non-Broadcast)

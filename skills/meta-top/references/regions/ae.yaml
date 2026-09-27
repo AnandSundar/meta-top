@@ -32,6 +32,25 @@ top_categories:
     positioning_note: "Beauty, fragrance, fashion; Arabic-first creative + founder-trust UGC; pricing AED 199 / AED 599 / AED 1,499."
   - name: finance-and-investment-platforms
     positioning_note: "ADGM/DFSA-regulated wrappers only; Arabic landing pages mandatory; prominent risk disclosure."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} UAE Dubai active running 90 days"
+    - "{category} UAE Meta ad still running since months longevity"
+  variants:
+    - "{category} UAE Meta ads advertiser variants count scaling"
+    - "{category} UAE Meta ads 20+ variants scaling winning"
+  cross_country:
+    - "{category} UAE Saudi GCC Meta ads cross-country rollout"
+    - "{category} UAE Meta ads global regional scaling proven"
+  engagement:
+    - "{category} UAE Meta ads comments buying intent link please"
+    - "{category} UAE Facebook Group comments refund policy"
+  marketplace:
+    - "{category} UAE Etsy Gumroad trending Arabic 2026"
+    - "{category} UAE Noon Namshi digital product rising"
+  pain_signal:
+    - "{category} UAE r/dubai r/UAE pain point desperate frustrated"
+    - "{category} UAE Quora question repeated demand waiting Arabic"
 top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest. Note: UAE is a thin-data region for public Meta ad-cost benchmarks — see data_quality_note for context."
 authoritative_sources:
   - source_name: UAE Government — Media and Advertising

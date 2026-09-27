@@ -30,6 +30,25 @@ top_categories:
     positioning_note: "Beauty, supplements, home bundles; AUD $29 / $69 / $149 anchors work; UGC + founder-narrative dominant."
   - name: fitness-and-wellness-subscriptions
     positioning_note: "Apparel + class-passes + supplements; testimonial + before-after creative; founder-led IG presence."
+signal_seeds:
+  longevity:
+    - "site:facebook.com/ads/library {category} Australia active running 90 days"
+    - "{category} Australia Meta ad still running since months longevity"
+  variants:
+    - "{category} Australia Meta ads advertiser variants count scaling"
+    - "{category} Australia Meta ads 20+ variants scaling winning"
+  cross_country:
+    - "{category} Australia US UK Meta ads cross-country rollout"
+    - "{category} Australia Meta ads global regional scaling proven"
+  engagement:
+    - "{category} Australia r/australia Reddit comments buying intent"
+    - "{category} Australia Facebook Group comments link please"
+  marketplace:
+    - "{category} Australia Gumroad Etsy AU trending tags 2026"
+    - "{category} Australia Canva Creators marketplace rising"
+  pain_signal:
+    - "{category} Australia r/australia r/ausfinance pain point desperate"
+    - "{category} Australia Quora question repeated demand waiting"
 top_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
 authoritative_sources:
   - source_name: AANA Code of Ethics
