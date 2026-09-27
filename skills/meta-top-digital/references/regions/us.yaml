@@ -1,0 +1,76 @@
+region_code: us
+display_name: United States
+currency: USD
+currency_symbol: "$"
+languages:
+  - English
+regulatory_body:
+  name: Federal Trade Commission
+  short: FTC
+  url: https://www.ftc.gov/business-guidance/advertising-and-marketing
+  one_line_summary: "Truthful, non-deceptive advertising; substantiated health, finance, and earnings claims; clear disclosures for endorsements (FTC Endorsement Guides)."
+prohibited_categories_digital:
+  - mlm-recruitment
+  - unsubstantiated-health-claims
+  - payday-lending
+  - get-rich-quick-income-claims
+  - crypto-token-presale-mechanics
+  - online-courses
+  - cohort-programs
+  - saas-subscriptions
+  - paid-memberships
+  - physical-goods-with-shipping
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+digital_categories:
+  - name: notion-templates-and-life-os
+    positioning_note: "Notion dashboards, second-brain systems, CRM templates; $9–$49 ladder dominates Gumroad US + Notion Marketplace."
+  - name: prompt-packs-and-ai-workflow-bundles
+    positioning_note: "Midjourney / ChatGPT / Claude prompt bundles for creators; $19–$79 instant-download hook."
+  - name: spreadsheet-and-finance-templates
+    positioning_note: "Excel / Google Sheets templates (budgeting, SaaS metrics, wedding planners); $7–$29 anchors work."
+  - name: design-assets-and-canva-templates
+    positioning_note: "Canva / Instagram template packs for SMBs and creators; $19–$99 with commercial license upsell."
+  - name: ebook-bundles-and-printables
+    positioning_note: "Downloadable guides, workbooks, wall art, life-planner PDFs; $7–$49 loss-leader to $199 bundle."
+digital_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
+authoritative_sources:
+  - source_name: FTC Advertising and Marketing
+    url: https://www.ftc.gov/business-guidance/advertising-and-marketing
+  - source_name: FTC Endorsement Guides
+    url: https://www.ftc.gov/sites/default/files/fta_statutes/16-cfr-part-255-endorsement-guides.pdf
+  - source_name: FDA Health Claims in Advertising
+    url: https://www.fda.gov/food/food-labeling-nutrition
+  - source_name: Meta US Advertising Standards
+    url: https://www.facebook.com/policies/ads
+digital_marketplaces:
+  - name: Gumroad Discover
+    url: https://gumroad.com/discover
+    primary_category: digital-marketplace-discover
+  - name: Notion Marketplace (Public Catalog)
+    url: https://www.notion.so/marketplace
+    primary_category: digital-marketplace-discover
+  - name: Etsy Digital Downloads
+    url: https://www.etsy.com/market/digital_downloads
+    primary_category: digital-marketplace-discover
+  - name: Creative Market
+    url: https://creativemarket.com
+    primary_category: digital-marketplace-discover
+  - name: Canva Creators
+    url: https://www.canva.com/creators/templates/
+    primary_category: digital-marketplace-discover
+  - name: Lemon Squeezy Creator Pages
+    url: https://www.lemonsqueezy.com
+    primary_category: digital-marketplace-discover
+  - name: Stan Store
+    url: https://stan.store
+    primary_category: digital-marketplace-discover
+  - name: Meta US Ad Library landing
+    url: https://www.facebook.com/ads/library/?active_status=active&country=US
+    primary_category: meta-ad-library

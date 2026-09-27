@@ -1,0 +1,76 @@
+region_code: uk
+display_name: United Kingdom
+currency: GBP
+currency_symbol: "£"
+languages:
+  - English
+regulatory_body:
+  name: Advertising Standards Authority and Information Commissioner's Office
+  short: ASA / ICO
+  url: https://www.asa.org.uk/codes-and-rulings/advertising-codes/non-broadcast-code.html
+  one_line_summary: "ASA enforces CAP/BCAP codes (truthful, non-misleading, socially responsible); ICO enforces UK GDPR for data; stricter rules for gambling and financial services."
+prohibited_categories_digital:
+  - crypto-trading-signals
+  - mlm-recruitment
+  - payday-lending
+  - get-rich-quick-income-claims
+  - gambling-without-license
+  - online-courses
+  - cohort-programs
+  - saas-subscriptions
+  - paid-memberships
+  - physical-goods-with-shipping
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+digital_categories:
+  - name: notion-templates-and-life-os
+    positioning_note: "Notion dashboards, second-brain systems, CRM templates; £7–£39 ladder dominates Gumroad UK + Notion Marketplace."
+  - name: prompt-packs-and-ai-workflow-bundles
+    positioning_note: "Midjourney / ChatGPT / Claude prompt bundles for creators; £15–£59 instant-download hook."
+  - name: spreadsheet-and-finance-templates
+    positioning_note: "Excel / Google Sheets templates (budgeting, ISA-tracker, pension-planner); £5–£29 anchors work."
+  - name: design-assets-and-canva-templates
+    positioning_note: "Canva / Instagram template packs for SMBs and creators; £15–£79 with commercial license upsell."
+  - name: ebook-bundles-and-printables
+    positioning_note: "Downloadable guides, workbooks, wall art, life-planner PDFs; £5–£39 loss-leader to £159 bundle."
+digital_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest."
+authoritative_sources:
+  - source_name: ASA CAP Code (Non-Broadcast)
+    url: https://www.asa.org.uk/codes-and-rulings/advertising-codes/non-broadcast-code.html
+  - source_name: ICO Direct Marketing Code (UK GDPR)
+    url: https://ico.org.uk/for-organisations/direct-marketing-and-fundraising/direct-marketing-guidance-direct-marketing-and-privacy-and-electronic-communications-regulations/
+  - source_name: FCA Financial Promotions on Social Media
+    url: https://www.fca.org.uk/publications/policy-statements/ps23-6-financial-promotions-social-media
+  - source_name: Meta UK Advertising Standards
+    url: https://www.facebook.com/policies/ads
+digital_marketplaces:
+  - name: Gumroad Discover
+    url: https://gumroad.com/discover
+    primary_category: digital-marketplace-discover
+  - name: Notion Marketplace (Public Catalog)
+    url: https://www.notion.so/marketplace
+    primary_category: digital-marketplace-discover
+  - name: Etsy Digital Downloads (UK)
+    url: https://www.etsy.com/uk/market/digital_downloads
+    primary_category: digital-marketplace-discover
+  - name: Creative Market
+    url: https://creativemarket.com
+    primary_category: digital-marketplace-discover
+  - name: Canva Creators
+    url: https://www.canva.com/creators/templates/
+    primary_category: digital-marketplace-discover
+  - name: Lemon Squeezy Creator Pages
+    url: https://www.lemonsqueezy.com
+    primary_category: digital-marketplace-discover
+  - name: Stan Store
+    url: https://stan.store
+    primary_category: digital-marketplace-discover
+  - name: Meta UK Ad Library landing
+    url: https://www.facebook.com/ads/library/?active_status=active&country=GB
+    primary_category: meta-ad-library

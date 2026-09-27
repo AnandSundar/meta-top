@@ -1,0 +1,76 @@
+region_code: ae
+display_name: United Arab Emirates
+currency: AED
+currency_symbol: "AED"
+languages:
+  - Arabic (preferred for landing pages)
+  - English
+regulatory_body:
+  name: National Media Council and Telecommunications and Digital Government Regulatory Authority
+  short: NMC / TDRA
+  url: https://u.ae/en/information-and-services/business/media-and-advertising
+  one_line_summary: "NMC licenses all advertising in the UAE; Arabic landing pages preferred for trust; stricter rules for financial products and cryptocurrency promotions."
+prohibited_categories_digital:
+  - crypto-trading-signals
+  - mlm-recruitment
+  - forex-copy-trading
+  - payday-lending
+  - get-rich-quick-income-claims
+  - unlicensed-financial-advisory
+  - online-courses
+  - cohort-programs
+  - saas-subscriptions
+  - paid-memberships
+  - physical-goods-with-shipping
+last_reviewed: "2026-09-27"
+format_constraints:
+  fb_primary_text_chars: 125
+  fb_headline_chars: 40
+  ig_reels_aspect: "9:16"
+  ig_reels_seconds_max: 15
+  wa_status_hours: 24
+  last_verified_against_meta_docs: "2026-09-15"
+digital_categories:
+  - name: notion-templates-and-life-os
+    positioning_note: "Notion dashboards, second-brain systems, CRM templates; AED 39–AED 199 ladder; thin-data region accepts smaller source counts with data_quality_note."
+  - name: prompt-packs-and-ai-workflow-bundles
+    positioning_note: "Midjourney / ChatGPT / Claude prompt bundles for creators; AED 49–AED 249 instant-download hook."
+  - name: spreadsheet-and-finance-templates
+    positioning_note: "Excel / Google Sheets templates (budgeting, freelance-invoicing); AED 29–AED 149 anchors work."
+  - name: design-assets-and-canva-templates
+    positioning_note: "Canva / Instagram template packs for SMBs and creators; AED 49–AED 249 with commercial license upsell."
+  - name: ebook-bundles-and-printables
+    positioning_note: "Downloadable guides, workbooks, wall art, life-planner PDFs; AED 29–AED 199 loss-leader to AED 599 bundle.
+"
+digital_categories_meta: "These are seed categories for live research; live entries with >=2 cited sources replace them in the digest. Note: UAE is a thin-data region for public Meta ad-cost benchmarks — see data_quality_note for context."
+authoritative_sources:
+  - source_name: UAE Government — Media and Advertising
+    url: https://u.ae/en/information-and-services/business/media-and-advertising
+  - source_name: TDRA Telecom and Digital Regulations
+    url: https://tdra.gov.ae/en/home
+  - source_name: SCA Securities and Commodities Authority (Financial Promotions)
+    url: https://www.sca.gov.ae/en
+  - source_name: Meta UAE Advertising Standards
+    url: https://www.facebook.com/policies/ads
+digital_marketplaces:
+  - name: Gumroad Discover
+    url: https://gumroad.com/discover
+    primary_category: digital-marketplace-discover
+  - name: Notion Marketplace (Public Catalog)
+    url: https://www.notion.so/marketplace
+    primary_category: digital-marketplace-discover
+  - name: Etsy Digital Downloads
+    url: https://www.etsy.com/market/digital_downloads
+    primary_category: digital-marketplace-discover
+  - name: Creative Market
+    url: https://creativemarket.com
+    primary_category: digital-marketplace-discover
+  - name: Canva Creators
+    url: https://www.canva.com/creators/templates/
+    primary_category: digital-marketplace-discover
+  - name: Lemon Squeezy Creator Pages
+    url: https://www.lemonsqueezy.com
+    primary_category: digital-marketplace-discover
+  - name: Meta AE Ad Library landing
+    url: https://www.facebook.com/ads/library/?active_status=active&country=AE
+    primary_category: meta-ad-library
