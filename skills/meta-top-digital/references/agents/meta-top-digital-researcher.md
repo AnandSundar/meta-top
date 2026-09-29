@@ -84,6 +84,18 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
 
 **Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
 
+### Tier 0 — Meta Ads Library via Playwright (mandatory, v1.4+)
+
+Always fire `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}` **before** tier 1 when the orchestrator needs longevity / variants / cross_country signal. Capture ad IDs + advertiser names + first-seen dates via `browser_snapshot` (a11y-tree), then construct the three sub-scores:
+
+- **longevity** — filter by `active_status=active`, count days since ad first appeared in Library (30+ → 2/3; 90+ → 3/3).
+- **variants** — click advertiser, count sibling ads in same Library entry (5–10 → 2/3; 20+ → 3/3; <3 → 0/3; 3–4 → 1/3 interpolating).
+- **cross_country** — same ad across multiple `country=` filter values (2–3 → 1/2; 5+ → 2/2).
+
+**Mandatory for these 3 sub-scores** — tier-1 through tier-3 are no longer authoritative for them, only confirmation/qualification. **Cap: ≤1 Playwright navigation per invocation**, separate from tier-4's ≤2 budget. **Browser automation only** (no `pip install playwright`) — requires the `playwright` MCP server configured in the host environment. Fall through to tier 1 if tier-0 hits Meta's verification wall (login/CAPTCHA) or Playwright is unavailable.
+
+Trust + ethics: tier-0 surfaces **patterns** (longevity, variants, cross-country) — NOT specific creator ad copy to clone. The "Category design, not content cloning" line stays intact.
+
 1. **WebSearch tool** — host-native search. Highest-quality tier; always try first.
 2. **Bash into Python `scripts/keyless_search.py`** — invoke the bundled keyless floor:
    ```

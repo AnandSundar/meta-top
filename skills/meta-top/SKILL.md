@@ -24,7 +24,7 @@ allowed-tools:
 
 A `/meta-top <region>` invocation is complete when:
 
-1. Line 1 of the output is the badge: `📊 meta-top v{X} · region: {region} · {YYYY-MM-DD}`. `{X}` is this skill's version (currently `v1.3`); bump it intentionally when shipping breaking changes, never auto-increment per invocation. v1.3 ships the winning-product framework (per-category X/14 rubric, underground-signals callout, 5-option post-menu).
+1. Line 1 of the output is the badge: `📊 meta-top v{X} · region: {region} · {YYYY-MM-DD}`. `{X}` is this skill's version (currently `v1.4`); bump it intentionally when shipping breaking changes, never auto-increment per invocation. v1.4 adds tier-0 = Meta Ads Library via Playwright as the mandatory first-tier source for longevity / variants / cross_country signals (additive to the v1.3 winning-product framework, 2026-09-29). v1.3 ships the winning-product framework (per-category X/14 rubric, underground-signals callout, 5-option post-menu).
 2. The six canonical sections are present in this order: (a) Market snapshot, (b) Top 5–7 product categories with local-currency pricing, (c) Winning ad creative patterns, (d) Specific product examples, (e) Meta ad cost benchmarks (CPM/CPC/CPV in the region's local currency), (f) Option B actionable brief.
 3. Every price reference is in the region's local currency (₹ / $ / CAD / £ / AUD / AED). USD is permitted as a secondary annotation only when ground-truth sources report USD (rare); never silently convert.
 4. Every citation is inline `[name](url)` markdown. **No raw URLs. No trailing Sources block. No broken empty `[]()` links.** URLs use `http://` or `https://`; `javascript:`, `data:`, `file:` are rejected.
@@ -47,10 +47,11 @@ These rules apply to every `/meta-top` output regardless of region:
 - **Format compliance is visible.** Ad-copy templates in Option B show the format constraints inline (FB primary text ≤125 chars, headline ≤40 chars, IG Reels 9:16 vertical, WA status 24h ephemeral) so the user sees the limits when they reach for the template.
 - **No raw URLs, ever.** A URL only appears wrapped in `[name](url)` markdown. Stand-alone URLs in plain text are a defect.
 
-## Reliability: source ladder (v1.1+)
+## Reliability: source ladder (v1.4+, tier-0 Meta Ads Library via Playwright; v1.1 base)
 
-When the host's WebSearch tool is unavailable or returns empty payloads, meta-top does NOT fail outright. The sub-agent walks a transparent 4-tier source ladder. Each tier is fall-through; the next tier only fires when the previous returned < 5 sources (US/IN) or < 3 sources (others).
+When the host's WebSearch tool is unavailable or returns empty payloads, meta-top does NOT fail outright. The sub-agent walks a transparent source ladder. **v1.4 adds tier-0 (Meta Ads Library via Playwright, mandatory for longevity / variants / cross_country)** above the existing 4-tier ladder that v1.1 introduced. Each tier is fall-through; the next tier only fires when the previous returned < 5 sources (US/IN) or < 3 sources (others).
 
+0. **Meta Ads Library via Playwright (v1.4+, mandatory)** — `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region}` and extract ad-inventory signals (longevity / variants / cross_country) via `browser_snapshot` (a11y-tree). **Mandatory** for the three ad-inventory sub-scores — tier-1 through tier-3 become confirmation/qualification, not authoritative. **Cap: ≤1 Playwright navigation per invocation** (note: meta-top has no tier-4 Playwright fallback, so tier-0 is the only Playwright budget). Falls through to tier 1 if Playwright is unavailable, or if Meta serves a verification wall (login/CAPTCHA). Trust + ethics: tier-0 surfaces **patterns**, not specific creator ad copy to clone. See `references/agents/meta-top-researcher.md` Step 3.0 for the full sub-score routing.
 1. **Host-native WebSearch** — primary tier.
 2. **Keyless DDG/SearXNG** — `scripts/keyless_search.py "QUERY" --count 5`. Stdlib-only, no API keys, no recurring cost. Mirrors last30days's `web_search_keyless.py` pattern.
 3. **Curated `top_brands`** — direct WebFetch to each brand-domain URL in `references/regions/<region>.yaml`'s `top_brands` list. Cap at 4 fetches; skip any URL that 403s/404s.
