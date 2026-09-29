@@ -86,6 +86,30 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
 
 **Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
 
+### Step 3.0a — Dispatch policy (v1.7+, 2026-09-29)
+
+The ladder above has two dispatch regimes. Mix them explicitly:
+
+**Parallel-dispatched (cheap, can run concurrently in the same response):**
+- **Tier-1** WebSearch — host-native search; multiple seed queries batched together.
+- **Tier-2** keyless DDG/SearXNG via `scripts/lib/web_search_keyless.py` — stdlib HTTP; top-2 queries from the seed list above are sufficient.
+- **Tier-3** curated `digital_marketplaces` WebFetch — independent URLs with no shared state; cap at 4 calls.
+
+**Serial-split (browser-automation, budget-constrained):**
+- **Tier-0** Meta Ad Library via Playwright — `browser_navigate` + `browser_snapshot` are stateful per navigation; one nav must complete before the next begins. ≤5 navigations per invocation.
+- **Tier-4** Playwright browser fallback — same constraint. ≤2 navigations by default; raises to ≤4 only when 1–2 of top-3 categories still lack `observed_live` after tier-3 (see Step 3.5).
+
+The split keeps the ≤9 per-invocation Playwright nav cap (≤5 tier-0 + ≤4 tier-4) from being spent on categories that could have been cleared by the cheap tiers. Run the cheap tiers first, then escalate to browser automation only for the categories that need it.
+
+**Jitter (v1.7+, 2026-09-29):** Between any two network calls in the same dispatch batch, sleep `random.uniform(0, 0.5)` seconds (0–500ms). Applies to:
+- Between tier-1 WebSearch calls in the same parallel batch.
+- Between tier-2 keyless calls (DDG and SearXNG cycle hops within `web_search_keyless.py` are an internal concern; jitter applies to back-to-back calls from the orchestrator).
+- Between tier-3 WebFetch calls.
+- Between tier-0 navigations (across top-3 categories and across the cross-region sweep).
+- Between tier-4 navigations.
+
+Rationale: a coordinated batch of 5 same-tick requests to the same upstream (DDG, Gumroad, Meta Ad Library) reads as a coordinated rate-limit attack; jitter spreads the load and avoids the 429 cliff. **Do NOT jitter within a single Playwright snapshot sequence** (a `browser_navigate` immediately followed by `browser_snapshot` for the same target must be back-to-back so the browser session stays coherent). Single-shot WebSearch / WebFetch / keyless calls do not need jitter; the jitter is for back-to-back calls within a batch.
+
 ### Step 3.0.0 — Tier-0 default firing (v1.6+, 2026-09-29)
 
 **Mandatory:** for every top-3 category from the region's `digital_categories` list, attempt tier-0 (Meta Ad Library via Playwright) **before** falling through to tier-1. This is the v1.6 default; the v1.5 framing of tier-0 as "advisory" is superseded.
@@ -157,9 +181,9 @@ For non-IN regions, sweep `IN` + `UK` + `US` as the cross-region set (so even wh
    - **Cap: ≤2 browser navigations by default; raises to ≤4 when 1-2 of top-3 categories still lack `observed_live` after tier-3** (see Step 3.5 below). Playwright is heavy (browser launch + JS rendering); use it only on the most-likely-to-clear-hard-block URL.
    - **Trigger per-target: only retry a URL that WebFetch 403/404'd, not one that returned valid HTML but no pricing.** Distinguish "blocked" from "no-data".
 
-#### Step 3.5 — Tier-4 cap-raise gate (v1.6+, 2026-09-29)
+#### Step 3.5 — Tier-4 cap-raise gate (v1.7+, 2026-09-29)
 
-Before tier-4 fires, compute the conditional cap raise. Pseudocode:
+Before tier-4 fires, compute the cap and whether to fire. Pseudocode (R1, KD3, R6):
 
 ```
 top3 = top_categories.slice(0, 3)
@@ -169,21 +193,31 @@ def has_observed_live(c):
 lacking = [c for c in top3 if not has_observed_live(c)]
 N = len(lacking)
 
+# v1.7+ (R1, KD3): ALL three branches fire tier-4 — fail-closed is preserved
+# by the v1.5 hard-block callout (category-pricing-research-required), which still
+# fires if tier-4 ALSO fails to produce observed_live for any of the 3 categories.
+# The change is only the path TO the block, not the block itself.
 if N == 0:
     tier_4_cap = 2
+    # no note needed; no categories lack observed_live
 elif N == 3:
-    # All 3 categories lack observed_live — brief is BLOCKED before tier-4 fires
-    # The hard-block callout is the output; do NOT raise the cap, do NOT append cap-raise note
-    tier_4_cap = 2
-    append_to_data_quality_note("category-pricing-research-required")
-    # do not fire tier-4
+    # N=3 full-block fallback: brief is blocked BEFORE tier-4, but tier-4 still
+    # fires in an attempt to clear the block. If tier-4 also returns 0 observed_live,
+    # the v1.5 hard-block callout fires and the brief ends.
+    tier_4_cap = 4
+    append_to_data_quality_note(
+        "tier-4 cap raised: 2 → 4 (N=3 full-block fallback; "
+        "hard-block fires if tier-4 also fails)"
+    )
 else:
     # N is 1 or 2 — raise the cap
     tier_4_cap = 4
-    append_to_data_quality_note(f"tier-4 cap raised: 2 → 4 ({N} of 3 categories still lack observed_live)")
+    append_to_data_quality_note(
+        f"tier-4 cap raised: 2 → 4 ({N} of 3 categories still lack observed_live)"
+    )
 ```
 
-**When N == 3, tier-4 does NOT fire** (the v1.5 hard-block callout is the output before tier-4 is reached). The cap-raise note is NOT appended in this case.
+**After tier-4 completes**, the hard-block gate re-evaluates: if 0 of 3 categories still carry `observed_live`, the v1.5 hard-block callout fires and the brief ends — regardless of which branch set the cap. (R6, R8)
 
 **Total Playwright budget** (tier-0 + tier-4) must not exceed 9 per invocation: ≤5 tier-0 navs + ≤4 tier-4 navs when raised.
 5. **Curated-only digest** — final fallback: emit a digest using the region YAML's `digital_categories` with `pricing_examples: []`, and append `"data_quality_note": "WebSearch, keyless floor, WebFetch, and Playwright browser fallback all returned 0 results; brief uses curated anchors only."` Continue to Step 4.

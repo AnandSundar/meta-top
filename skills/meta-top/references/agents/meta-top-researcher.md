@@ -75,6 +75,28 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
 
 **Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
 
+### Step 3.0a — Dispatch policy (v1.7+, 2026-09-29)
+
+The ladder above has two dispatch regimes. Mix them explicitly:
+
+**Parallel-dispatched (cheap, can run concurrently in the same response):**
+- **Tier-1** WebSearch — host-native search; multiple seed queries batched together.
+- **Tier-2** keyless DDG/SearXNG via `scripts/lib/web_search_keyless.py` — stdlib HTTP; top-2 queries from the seed list above are sufficient.
+- **Tier-3** curated `top_brands` WebFetch — independent URLs with no shared state; cap at 4 calls.
+
+**Serial-split (browser-automation, budget-constrained):**
+- **Tier-0** Meta Ad Library via Playwright — `browser_navigate` + `browser_snapshot` are stateful per navigation; one nav must complete before the next begins. ≤5 navigations per invocation (this skill has no tier-4 browser fallback, so tier-0 is the only Playwright budget).
+
+The split keeps the ≤5 per-invocation Playwright nav cap from being spent on categories that could have been cleared by the cheap tiers. Run the cheap tiers first, then escalate to browser automation only for the categories that need it.
+
+**Jitter (v1.7+, 2026-09-29):** Between any two network calls in the same dispatch batch, sleep `random.uniform(0, 0.5)` seconds (0–500ms). Applies to:
+- Between tier-1 WebSearch calls in the same parallel batch.
+- Between tier-2 keyless calls (DDG and SearXNG cycle hops within `web_search_keyless.py` are an internal concern; jitter applies to back-to-back calls from the orchestrator).
+- Between tier-3 WebFetch calls.
+- Between tier-0 navigations (across top-3 categories and across the cross-region sweep).
+
+Rationale: a coordinated batch of 5 same-tick requests to the same upstream (DDG, brand landing pages, Meta Ad Library) reads as a coordinated rate-limit attack; jitter spreads the load and avoids the 429 cliff. **Do NOT jitter within a single Playwright snapshot sequence** (a `browser_navigate` immediately followed by `browser_snapshot` for the same target must be back-to-back so the browser session stays coherent). Single-shot WebSearch / WebFetch / keyless calls do not need jitter; the jitter is for back-to-back calls within a batch.
+
 ### Tier 0 — Meta Ads Library via Playwright (per-category, v1.5+, 2026-09-29)
 
 For EACH top-3 category (top categories from the YAML's `top_categories` plus any live-replacement categories with ≥2 cited sources), fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `smart-watch`, `skincare`, `fitness-app`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
