@@ -86,6 +86,35 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
 
 **Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
 
+### Step 3.0.0 — Tier-0 default firing (v1.6+, 2026-09-29)
+
+**Mandatory:** for every top-3 category from the region's `digital_categories` list, attempt tier-0 (Meta Ad Library via Playwright) **before** falling through to tier-1. This is the v1.6 default; the v1.5 framing of tier-0 as "advisory" is superseded.
+
+For each top-3 category, attempt:
+
+```
+mcp__plugin_playwright_playwright__browser_navigate(
+  url="https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}"
+)
+mcp__plugin_playwright_playwright__browser_snapshot()  # a11y-tree
+```
+
+Where `{category-keyword}` is the slug-style keyword from the YAML's `digital_categories[]` entry (e.g., `notion-template`, `chatgpt-prompt`, `excel-budget`, `ebook-bundle`).
+
+**Outcomes per category:**
+
+| Outcome | What to record |
+|---|---|
+| Ad grid renders (a11y tree shows ≥1 ad card with `data-pagelet="SearchResultsPage"` or equivalent ad-card structure) | Extract ad IDs, advertiser names, first-seen dates; compute `longevity`, `variants`, `cross_country` sub-scores per the cross-region sweep below |
+| Verification wall (login / CAPTCHA) | Append `tier-0 skipped for {category}: meta_verification_wall` to `data_quality_note`; set `cross_country: 0/2`, `variants: 0/2`, `longevity: 1/2` (seed floor) for that category |
+| Empty grid / 0 ads returned | Append `tier-0 skipped for {category}: empty_grid_or_rate_limit` to `data_quality_note`; set seed floor |
+| Playwright MCP unavailable | Append `tier-0 skipped for {category}: playwright_mcp_not_configured` to `data_quality_note`; set seed floor |
+| `browser_navigate` errors (timeout, DNS) | Append `tier-0 skipped for {category}: <error_class>` to `data_quality_note`; set seed floor |
+
+**Cap:** ≤5 tier-0 Playwright navigations per invocation (typically 3 for top-3 categories; up to 5 if the region has 5 top categories in YAML). Each cross-region sweep counts toward the per-category tier-0 budget (≤3 cross-region navs per category for IN+US+UK sweep).
+
+**After tier-0 completes (or is skipped), continue to Step 3.0 sub-score routing below.**
+
 ### Tier 0 — Meta Ads Library via Playwright (per-category, v1.5+, 2026-09-29)
 
 For EACH top-3 category (top categories from the YAML's `digital_categories` plus any live-replacement categories with ≥2 cited sources), fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `notion-template`, `chatgpt-prompt`, `excel-budget`, `ebook-bundle`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
@@ -120,13 +149,43 @@ For non-IN regions, sweep `IN` + `UK` + `US` as the cross-region set (so even wh
    - 3–10 unique advertisers → moderate competition: `cpm_range ≈ {currency}×1.5 to {currency}×6`
    - 11+ unique advertisers → high competition: `cpm_range ≈ {currency}×4 to {currency}×15`
    This is a derived heuristic, NOT a measured CPM. Label the output benchmark line `[heuristic from advertiser count, not a measured CPM]`. When triggered, set `partial_research: true` and append `"benchmark_proxy: tier-3.5 advertiser-count heuristic for {n} of {m} categories (low: {n_low} / mid: {n_mid} / high: {n_high})"` to `data_quality_note`. Does NOT count against the source budget (derivation from tier-0 evidence).
-4. **Playwright browser fallback (v1.2+, 2026-09-27)** — fire this tier only when tier 3 returned 403/404 on **≥2 marketplace URLs** OR `pricing_examples` is empty across all `top_categories` after tier 3. Invoke the **playwright MCP server** via:
+4. **Playwright browser fallback (v1.2+, 2026-09-27; v1.6+ cap raised conditionally, 2026-09-29)** — fire this tier only when tier 3 returned 403/404 on **≥1 marketplace URL** OR `pricing_examples` is empty across all `top_categories` after tier 3. Invoke the **playwright MCP server** via:
    - `mcp__plugin_playwright_playwright__browser_navigate` to load the JS-driven marketplace URL (e.g., Canva Creators search, dynamic Gumroad category page, Instamojo storefront).
    - `mcp__plugin_playwright_playwright__browser_snapshot` (a11y-tree) to extract per-product prices in INR.
    - Optional: `mcp__plugin_playwright_playwright__browser_evaluate` to run inline JS (e.g., `() => Array.from(document.querySelectorAll('[data-price]')).map(e => e.textContent)`).
    - **Skip this tier entirely if the playwright MCP tools are not available in your tool list** — fall through to tier 5.
-   - **Cap: ≤2 browser navigations per invocation.** Playwright is heavy (browser launch + JS rendering); use it only on the most-likely-to-clear-hard-block URL.
+   - **Cap: ≤2 browser navigations by default; raises to ≤4 when 1-2 of top-3 categories still lack `observed_live` after tier-3** (see Step 3.5 below). Playwright is heavy (browser launch + JS rendering); use it only on the most-likely-to-clear-hard-block URL.
    - **Trigger per-target: only retry a URL that WebFetch 403/404'd, not one that returned valid HTML but no pricing.** Distinguish "blocked" from "no-data".
+
+#### Step 3.5 — Tier-4 cap-raise gate (v1.6+, 2026-09-29)
+
+Before tier-4 fires, compute the conditional cap raise. Pseudocode:
+
+```
+top3 = top_categories.slice(0, 3)
+def has_observed_live(c):
+    ex = c.get("pricing_examples", [])
+    return len(ex) > 0 and any(p.get("pricing_tier_source") == "observed_live" for p in ex)
+lacking = [c for c in top3 if not has_observed_live(c)]
+N = len(lacking)
+
+if N == 0:
+    tier_4_cap = 2
+elif N == 3:
+    # All 3 categories lack observed_live — brief is BLOCKED before tier-4 fires
+    # The hard-block callout is the output; do NOT raise the cap, do NOT append cap-raise note
+    tier_4_cap = 2
+    append_to_data_quality_note("category-pricing-research-required")
+    # do not fire tier-4
+else:
+    # N is 1 or 2 — raise the cap
+    tier_4_cap = 4
+    append_to_data_quality_note(f"tier-4 cap raised: 2 → 4 ({N} of 3 categories still lack observed_live)")
+```
+
+**When N == 3, tier-4 does NOT fire** (the v1.5 hard-block callout is the output before tier-4 is reached). The cap-raise note is NOT appended in this case.
+
+**Total Playwright budget** (tier-0 + tier-4) must not exceed 9 per invocation: ≤5 tier-0 navs + ≤4 tier-4 navs when raised.
 5. **Curated-only digest** — final fallback: emit a digest using the region YAML's `digital_categories` with `pricing_examples: []`, and append `"data_quality_note": "WebSearch, keyless floor, WebFetch, and Playwright browser fallback all returned 0 results; brief uses curated anchors only."` Continue to Step 4.
 
 **Transparency rule:** when tier 2, 3, or 4 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after WebSearch returned <M>."` (e.g., `"Ladder tier 4 (Playwright) contributed 1 source after tier 3 WebFetch returned 403 on Canva Creators."`) Do not silently substitute.
