@@ -11,9 +11,18 @@ The orchestrator (meta-top's sub-agent) owns that gating; this module just
 performs the search when called.
 
 Two vendor-neutral rungs, both stdlib-only via :mod:`http`:
-  1. DuckDuckGo HTML endpoint (no key, no instance to maintain).
-  2. A configurable SearXNG instance returning JSON (``META_TOP_SEARXNG_URL``
-     or ``--searxng-url`` flag), tried when DuckDuckGo yields nothing.
+  1. A configurable SearXNG instance returning JSON (``META_TOP_SEARXNG_URL``
+     or ``--searxng-url`` flag), tried FIRST.
+  2. A cycle of community-public SearXNG instances (``PUBLIC_SEARXNG_INSTANCES``),
+     tried after the configured instance if it returned nothing.
+  3. DuckDuckGo HTML endpoint (no key, no instance to maintain), tried as
+     the final floor when all SearXNG attempts returned nothing.
+
+v1.7 (plan unit U4) reverses the v1.6 ordering: SearXNG is tried first because
+DDG HTML is the most rate-limited rung in practice (same rate-limit surface
+that blocks tier-1 WebSearch for IN/META research); cycling through several
+SearXNG instances gives the brief a better chance at fresh results before
+falling through to DDG.
 
 Never raises. Returns results in the same shape as a hypothetical paid backend
 so that future tiers can compose with this one. On total failure returns
@@ -29,6 +38,19 @@ from . import http
 
 KEYLESS_BACKEND = "keyless"
 _DDG_HTML_URL = "https://html.duckduckgo.com/html/"
+
+# v1.7 plan unit U4: cycle through community-public SearXNG instances when
+# no META_TOP_SEARXNG_URL is configured (or when the configured one returns
+# nothing). These are bare-base URLs with no trailing slash; each is tried
+# in order, short-circuiting on first hit, before falling through to DDG.
+# Instances go up and down without notice; the cycle absorbs that.
+PUBLIC_SEARXNG_INSTANCES: tuple[str, ...] = (
+    "https://searx.be",
+    "https://search.disroot.org",
+    "https://searx.tiekoetter.com",
+    "https://priv.au",
+    "https://searx.ninja",
+)
 
 # Floor-tier relevance: below a hypothetical paid backend's 0.8 so that if a
 # future tier-2 lands, fusion will prefer paid/host-native results.
@@ -79,23 +101,46 @@ def keyless_search(
     The orchestrator (sub-agent) should call this AFTER WebSearch returned 0
     results, not before. The host's WebSearch is strictly better-quality when
     available.
+
+    v1.7 (plan unit U4): cycle through the configured SearXNG URL (if any)
+    and PUBLIC_SEARXNG_INSTANCES first, short-circuiting on first hit, then
+    fall through to DuckDuckGo HTML as the final floor.
     """
-    items = _search_ddg(query, count)
-    used = "ddg"
     artifact: dict = {
         "label": "keyless",
         "query": query,
-        "keyless_backend": used,
-        "result_count": len(items),
+        "keyless_backend": "",
+        "result_count": 0,
     }
-    if not items and searxng_url:
-        items = _search_searxng(query, count, searxng_url)
-        used = "searxng"
-        artifact["keyless_backend"] = used
+    # Build the SearXNG try-list: configured URL first (if set), then the
+    # public instances in declared order. Skip empties; dedupe to avoid
+    # retrying the same URL twice when the configured URL is also in the
+    # public list.
+    seen: set[str] = set()
+    searxng_try_list: list[str] = []
+    for candidate in [searxng_url, *PUBLIC_SEARXNG_INSTANCES]:
+        if not candidate:
+            continue
+        normalized = candidate.rstrip("/")
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        searxng_try_list.append(normalized)
+    for instance in searxng_try_list:
+        items = _search_searxng(query, count, instance)
+        if items:
+            artifact["keyless_backend"] = "searxng"
+            artifact["searxng_instance"] = instance
+            artifact["result_count"] = len(items)
+            return items, artifact
+    # Fall through to DuckDuckGo (the rate-limited floor).
+    items = _search_ddg(query, count)
+    if items:
+        artifact["keyless_backend"] = "ddg"
         artifact["result_count"] = len(items)
-    if not items:
-        artifact["reason"] = "keyless-search-unavailable"
-    return items, artifact
+        return items, artifact
+    artifact["reason"] = "keyless-search-unavailable"
+    return [], artifact
 
 
 def _search_ddg(query: str, count: int) -> list[dict]:
