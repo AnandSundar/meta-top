@@ -63,9 +63,9 @@ Run WebSearch queries per the canonical source categories. For each region, the 
 
 Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation. The 4 v1.3 winning-product queries fit within the existing 8-source ceiling; do not exceed it.
 
-**Source-tier diversification cap (v1.5+, 2026-09-29):** At least **70% of cited sources must be primary-tier** — regulatory body (FTC, ASCI, ASA, AANA, Ad Standards + CRTC, NMC + TRA), Meta (Ad Library URLs, Meta Newsroom, Meta Business Help), mainstream news outlets, and named practitioner case studies. At most **30% may be secondary-tier** — third-party blog posts, listicle roundups, comparison aggregators, social threads (Reddit / Quora / Twitter / FB Groups). When the research naturally lands above 30% secondary (e.g., the only sources that surfaced are blog posts), set `partial_research: true`, append `"source_tier_cap_exceeded: secondary tier at {n/8} > 30%"` to `data_quality_note`, and either trigger tier-2 keyless search for primary-tier anchors or accept the cap-exceeded caveat. Tier-0 (Meta Ad Library via Playwright) and tier-3 (curated `top_brands` URLs) are always primary-tier.
+**Source-tier diversification cap (v1.5+, 2026-09-29):** At least **70% of cited sources must be primary-tier** — regulatory body (FTC, ASCI, ASA, AANA, Ad Standards + CRTC, NMC + TRA), Meta (Ad Library URLs, Meta Newsroom, Meta Business Help), mainstream news outlets, and named practitioner case studies. At most **30% may be secondary-tier** — third-party blog posts, listicle roundups, comparison aggregators, social threads (Reddit / Quora / Twitter / FB Groups). When the research naturally lands above 30% secondary (e.g., the only sources that surfaced are blog posts), set `partial_research: true`, append `"source_tier_cap_exceeded: secondary tier at {n/8} > 30%"` to `data_quality_note`, and either trigger tier-2 keyless search for primary-tier anchors or accept the cap-exceeded caveat. Tier-0 (Meta Ad Library + top_brands via Playwright, v1.8) is always primary-tier. Tier-3 (benchmark proxy) is not a source tier.
 
-**Ladder fallback (v1.1+):** if the WebSearch total is **< 5** for US/IN, or **< 3** for CA/UK/AU/AE, walk the source ladder described in **Step 3.0** below — invoke tier 2 (Bash into `scripts/keyless_search.py`) for the top 2 queries, then tier 3 (WebFetch curated `top_brands` URLs from the region YAML). Cap total sources across all tiers at **8**. Set `partial_research: true` whenever tier 2 or 3 contributes ≥1 source.
+**Ladder fallback (v1.1+, updated v1.8):** if tier-0 (Playwright) returns **< 5** for US/IN, or **< 3** for CA/UK/AU/AE, walk the source ladder described in **Step 3.0a** below — invoke tier-1 (WebSearch) then tier-2 (keyless). Cap total sources across all tiers at **8**. Set `partial_research: true` whenever tier-1 or tier-2 contributes ≥1 source.
 
 On a 429 or rate-limit response, retry with exponential backoff (max 2 retries). If still rate-limited after 2 retries, continue with remaining sources and set `partial_research: true`, `rate_limit_hit: true` in the digest's metadata.
 
@@ -75,67 +75,102 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
 
 **Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
 
-### Step 3.0a — Dispatch policy (v1.7+, 2026-09-29)
+### Step 3.0a — Dispatch policy (v1.8 Playwright-primary)
 
-The ladder above has two dispatch regimes. Mix them explicitly:
+The ladder has two dispatch regimes. Mix them explicitly:
+
+**Serial-first (browser-automation, budget-constrained):**
+- **Tier-0** Playwright-primary — `browser_navigate` + `browser_snapshot` are stateful per navigation; one nav must complete before the next begins. Covers BOTH Meta Ad Library (top-3 categories) AND curated `top_brands` URLs from the region YAML. Cap: ≤9 navigations per invocation by default (5 Meta Ad Library + 4 top_brands). When N∈{1,2,3} of top-3 categories still lack `observed_live` after the default ≤9 navs, the cap raises to ≤13 via the Step 3.5 cap-raise gate (4 additional retry navs following the priority order). v1.8 has no separate tier-4 browser fallback — tier-0 is the only Playwright budget, and the cap-raise gate absorbs any further retry needs. Run tier-0 first to establish the authoritative ad-inventory signals (longevity / variants / cross_country).
 
 **Parallel-dispatched (cheap, can run concurrently in the same response):**
-- **Tier-1** WebSearch — host-native search; multiple seed queries batched together.
+- **Tier-1** WebSearch — host-native search; fires when tier-0 returns < 5 sources (US/IN) or < 3 sources (others), or as parallel confirmation alongside tier-2.
 - **Tier-2** keyless DDG/SearXNG via `scripts/lib/web_search_keyless.py` — stdlib HTTP; top-2 queries from the seed list above are sufficient.
-- **Tier-3** curated `top_brands` WebFetch — independent URLs with no shared state; cap at 4 calls.
 
-**Serial-split (browser-automation, budget-constrained):**
-- **Tier-0** Meta Ad Library via Playwright — `browser_navigate` + `browser_snapshot` are stateful per navigation; one nav must complete before the next begins. ≤5 navigations per invocation (this skill has no tier-4 browser fallback, so tier-0 is the only Playwright budget).
-
-The split keeps the ≤5 per-invocation Playwright nav cap from being spent on categories that could have been cleared by the cheap tiers. Run the cheap tiers first, then escalate to browser automation only for the categories that need it.
+The split keeps the ≤9 per-invocation Playwright nav cap from being spent on categories that could have been cleared by the cheap tiers. Run tier-0 first, then escalate to the parallel tiers only for what tier-0 did not cover.
 
 **Jitter (v1.7+, 2026-09-29):** Between any two network calls in the same dispatch batch, sleep `random.uniform(0, 0.5)` seconds (0–500ms). Applies to:
 - Between tier-1 WebSearch calls in the same parallel batch.
 - Between tier-2 keyless calls (DDG and SearXNG cycle hops within `web_search_keyless.py` are an internal concern; jitter applies to back-to-back calls from the orchestrator).
-- Between tier-3 WebFetch calls.
 - Between tier-0 navigations (across top-3 categories and across the cross-region sweep).
 
 Rationale: a coordinated batch of 5 same-tick requests to the same upstream (DDG, brand landing pages, Meta Ad Library) reads as a coordinated rate-limit attack; jitter spreads the load and avoids the 429 cliff. **Do NOT jitter within a single Playwright snapshot sequence** (a `browser_navigate` immediately followed by `browser_snapshot` for the same target must be back-to-back so the browser session stays coherent). Single-shot WebSearch / WebFetch / keyless calls do not need jitter; the jitter is for back-to-back calls within a batch.
 
-### Tier 0 — Meta Ads Library via Playwright (per-category, v1.5+, 2026-09-29)
 
-For EACH top-3 category (top categories from the YAML's `top_categories` plus any live-replacement categories with ≥2 cited sources), fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `smart-watch`, `skincare`, `fitness-app`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
+### Tier 0 — Playwright-primary: Meta Ad Library + top_brands (v1.8, mandatory first tier)
 
+**v1.8: tier-0 absorbs the old tier-3 WebFetch of `top_brands` URLs.** The curated brand URLs are now browsed via Playwright alongside the Meta Ad Library, sharing the ≤9 navigation budget (default; raises to ≤13 via Step 3.5).
+
+For EACH top-3 category, fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `smart-watch`, `skincare`, `fitness-app`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
 - **longevity** — per-category: days since ad first appeared; 30+ → 2/3; 90+ → 3/3.
 - **variants** — per-category: count sibling ads per advertiser; 5–10 → 2/3; 20+ → 3/3; <3 → 0/3; 3–4 → 1/3 interpolating.
-- **cross_country** — see U3 (cross-region sweep); per-category observed-overlap scoring.
+- **cross_country** — see cross-region sweep below; per-category observed-overlap scoring.
 
-**Mandatory for these 3 sub-scores** — tier-1 through tier-3 are no longer authoritative for them, only confirmation/qualification. **Cap: ≤5 Playwright navigations per invocation** (one per top category). **Total Playwright nav cap: ≤5 per invocation** (note: meta-top has no tier-4 Playwright fallback, so tier-0 is the only Playwright budget for ad-inventory signals). **Browser automation only** (no `pip install playwright`) — requires the `playwright` MCP server configured in the host environment. Fall through to tier 1 if tier-0 hits Meta's verification wall (login/CAPTCHA) or Playwright is unavailable.
+**Mandatory for these 3 sub-scores** — tier-1 through tier-3 are confirmation/qualification, not authoritative. **Cap: ≤9 Playwright navigations per invocation total** by default (Meta Ad Library + top_brands share one budget); raises to ≤13 via the Step 3.5 cap-raise gate when N∈{1,2,3} of top-3 categories still lack `observed_live`. Falls through to tier 1 if Playwright is unavailable or Meta serves a verification wall (login/CAPTCHA). Trust + ethics: tier-0 surfaces **patterns**, not specific creator ad copy to clone.
 
-Trust + ethics: tier-0 surfaces **patterns** (longevity, variants, cross-country), NOT specific creator ad copy to clone. The "Category design, not content cloning" line stays intact.
+For each brand-domain URL in `references/regions/<region>.yaml`'s `top_brands` list, use `browser_navigate` + `browser_snapshot` to render the JS-driven brand page and extract pricing signals that WebFetch cannot see. These navigations count toward the ≤9 default / ≤13 raised cap.
 
 **Cross-region sweep (v1.5+):** For each top-3 category, after the `country={region_code}` query (where `{region_code}` is the YAML's region, e.g., `IN`), sweep `country=US` and `country=UK` for observed overlap (≤3 cross-region navigations per category, fold into the per-category tier-0 budget). Compute `cross_country` sub-score from observed overlap:
 - Same advertiser + same ad creative across 2–3 countries → 1/2
 - Same advertiser + same ad creative across 5+ countries → 2/2
-- No observed overlap across the sweep → 0/2 (downgrades the v1.4 "EU transparency flag" proxy)
+- No observed overlap across the sweep → 0/2
 
-For non-IN regions, sweep `IN` + `UK` + `US` as the cross-region set (so even when the YAML is `US`, the sweep still touches `IN` + `UK` + `US` for cross-region overlap detection). This is the only source of `cross_country` evidence in v1.5+.
+For non-IN regions, sweep `IN` + `UK` + `US` as the cross-region set (so even when the YAML is `US`, the sweep still touches `IN` + `UK` + `US` for cross-region overlap detection).
 
-1. **WebSearch tool** — host-native search. Highest-quality tier; always try first.
+**Post-tier-0 routing:** After tier-0 completes (or is skipped), continue to the tier-1+ numbered ladder below for pricing signals, creative patterns, and benchmark data.
+
+1. **WebSearch tool** — confirmation/fallback. NOT the default. Fires only when (a) tier-0 fell through (Playwright unavailable / verification wall / rate-limit), (b) the researcher needs cross-checking on a tier-0 observation, or (c) the data point is non-landing-page (e.g., a regulatory body report). When Playwright is fully unavailable, tier-1 becomes effective primary — the ladder's behavior degrades gracefully to the v1.7 pattern.
 2. **Bash into Python `scripts/keyless_search.py`** — invoke the bundled keyless floor:
    ```
    python "<skill-root>/scripts/keyless_search.py" "QUERY" --count 5
    ```
-   - Reads `META_TOP_SEARXNG_URL` env (or `--searxng-url <url>` flag) to enable the SearXNG rung when DDG returns 0.
-   - Outputs JSON to stdout: `{"results": [...], "artifact": {"keyless_backend", "result_count", "reason?"}}`.
-   - Exit code `0` = ≥1 result; exit code `2` = zero results.
-   - Top 2 queries from the seed list above are sufficient; more queries wastes capacity.
-3. **WebFetch curated `top_brands` URLs** from `references/regions/<region>.yaml`'s `top_brands` list (4–6 brand-domain URLs per region; cap at **4** WebFetch calls to keep within the 20-call ceiling). Skip any URL that 403s/404s. Brand URLs are stable landing pages (mamaearth.in, boat-lifestyle.com, etc.) so they survive subdomain migrations better than Ad-Library-specific pages.
-3.5. **Meta Library advertiser-count proxy (v1.5+, benchmark-specific, 2026-09-29)** — fire this benchmark-only tier when tier 3 returns 403/404 on **≥2 brand URLs** AND `benchmarks.cpm_range` is empty (or set to the `"Insufficient public data — refer to Meta Ad Library for live benchmarks"` no-estimate string) across all `top_categories` after tier 3. Derive a heuristic CPM range from the **tier-0 Meta Ad Library advertiser count per top-3 category**:
-   - 0–2 unique advertisers → low competition: `cpm_range ≈ {currency}×0.5 to {currency}×2` baseline
-   - 3–10 unique advertisers → moderate competition: `cpm_range ≈ {currency}×1.5 to {currency}×6`
-   - 11+ unique advertisers → high competition: `cpm_range ≈ {currency}×4 to {currency}×15`
-   This is a derived heuristic, NOT a measured CPM. Label the output benchmark line `[heuristic from advertiser count, not a measured CPM]`. When triggered, set `partial_research: true` and append `"benchmark_proxy: tier-3.5 advertiser-count heuristic for {n} of {m} categories (low: {n_low} / mid: {n_mid} / high: {n_high})"` to `data_quality_note`. Does NOT count against the source budget (derivation from tier-0 evidence).
-4. **Curated-only digest** — final fallback: emit a digest using the region YAML's `top_categories` with `pricing_examples: []`, and append `"data_quality_note": "WebSearch and keyless floor both returned 0 results; brief uses curated anchors only."` Continue to Step 4.
+   — Reads `META_TOP_SEARXNG_URL` env (or `--searxng-url <url>` flag) to enable the SearXNG rung when DDG returns 0.
+   — Outputs JSON to stdout: `{"results": [...], "artifact": {"keyless_backend", "result_count", "reason?"}}`.
+   — Exit code `0` = ≥1 result; exit code `2` = zero results.
+   — Top 2 queries from the seed list above are sufficient; more queries wastes capacity.
+3. ~~(Old tier-3 — removed in v1.8; absorbed into tier-0.)~~
+4. **Advertiser-count proxy (v1.5+, renumbered from tier-3.5 to tier-2.5 in v1.8)** — when `benchmarks.cpm_range` is empty across all `top_categories` after tier-2, derive a heuristic CPM range from the **tier-0 Meta Ad Library advertiser count per top-3 category**:
+   — 0–2 unique advertisers → low competition: `cpm_range ≈ {currency}×0.5 to {currency}×2` baseline
+   — 3–10 unique advertisers → moderate competition: `cpm_range ≈ {currency}×1.5 to {currency}×6`
+   — 11+ unique advertisers → high competition: `cpm_range ≈ {currency}×4 to {currency}×15`
+   This is a derived heuristic, NOT a measured CPM. Label the output benchmark line `[heuristic from advertiser count, not a measured CPM]`. When triggered, set `partial_research: true` and append `benchmark_proxy: tier-2.5 advertiser-count heuristic for {n} of {m} categories` to `data_quality_note`. Does NOT count against the source budget (derivation from tier-0 evidence).
+5. ~~(Old tier-4 Playwright browser fallback — removed in v1.8; folded into tier-0 as a per-category retry path via the Step 3.5 cap-raise gate.)~~
+6. **Curated anchors only** — final fallback (renumbered from tier-4 to tier-3 in v1.8): emit a digest using the region YAML's `top_categories` with `pricing_examples: []`, and append `"data_quality_note": "All ladder tiers exhausted; brief uses curated anchors only."` Continue to Step 4.
 
-**Transparency rule:** when tier 2 or 3 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after WebSearch returned <M>."` Do not silently substitute.
+#### Step 3.5 — Tier-0 cap-raise gate (v1.8)
 
-**Scope ceiling:** ≤8 total sources across all tiers; ≤20 total WebFetch calls across the whole invocation (seed queries + tier 3 brand fetches).
+After the default ≤9 tier-0 Playwright navigations complete (5 Meta Ad Library + 4 top_brands), compute whether to raise the cap to ≤13. Pseudocode:
+
+```
+top3 = top_categories.slice(0, 3)
+def has_observed_live(c):
+    ex = c.get("pricing_examples", [])
+    return len(ex) > 0 and any(p.get("pricing_tier_source") == "observed_live" for p in ex)
+lacking = [c for c in top3 if not has_observed_live(c)]
+N = len(lacking)
+
+if N == 0:
+    tier_0_cap = 9  # default, no raise needed
+elif N in (1, 2, 3):
+    tier_0_cap = 13
+    append_to_data_quality_note(
+        f"tier-0 cap raised: 9 → 13 ({N} of 3 categories still lack observed_live)"
+    )
+```
+
+**Priority order for the additional ≤4 retry navigations:**
+
+1. Per category still lacking `observed_live`: re-fire the highest-priority `top_brands` URL that was NOT yet tried for that category in this invocation.
+2. If the same URL was already tried for all 3 lacking categories, fall through to the next `top_brands` URL in the YAML list.
+3. If the YAML's `top_brands` are exhausted, the additional navs are spent on a single best-bet landing page per lacking category (e.g., the top brand-page search result for the highest-volume category keyword).
+
+**After the cap-raise retries complete**, the brief-skip gate re-evaluates: if 0 of 3 categories still carry `observed_live`, the v1.5 `category-pricing-research-required` notice fires and the brief ends — regardless of whether the cap was raised.
+
+**Total tier-0 Playwright budget** must not exceed 13 per invocation. Cap-raise navs are 100% tier-0 (no separate tier-4 fallback in v1.8).
+
+**Transparency rule:** when tier 1, 2, or 2.5 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after tier-0 returned <M>."` Do not silently substitute.
+
+**Scope ceiling:** ≤8 total sources across all tiers; ≤20 total fetch calls across the whole invocation (seed queries + tier-0 Playwright navigations ≤13). Tier-1 WebSearch calls do NOT count toward the 20-call ceiling.
+
 
 ### Step 3b — Filter
 
@@ -285,7 +320,7 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
       "tier": "primary|secondary",
       "extracted_fields": ["<pricing|advertiser|ad_id|ad_creative_url|engagement_metric|benchmark|other>"],
       "audit_provenance": {
-        "tier_origin": "<websearch|webfetch|keyless_ddg|keyless_searxng|playwright_tier0|playwright_tier4|curated_yaml>",
+        "tier_origin": "<websearch|webfetch|keyless_ddg|keyless_searxng|playwright_tier0|curated_yaml>",
         "fetch_status": "<200|403|404|429|rate_limited|other>",
         "snippet_excerpt": "<optional 1-sentence excerpt of what was extracted — for pricing_examples sources, the exact phrase carrying the price>"
       }
@@ -342,3 +377,5 @@ To prevent scope creep:
 - Does NOT scrape behind auth walls.
 - Does NOT fabricate benchmarks. The no-estimate rule is load-bearing.
 - Does NOT modify any file or push any state. Output is JSON to stdout.
+- Does NOT invoke Playwright outside the **tier-0 cap-raise gate** (Step 3.5). In v1.8, tier-0 Playwright fires by default for every top-3 category; the cap raise (≤9 → ≤13) is the ONLY path to additional navigations, and it follows the `top_brands` priority order. Undirected Playwright is never permitted.
+- Does NOT `pip install` the `playwright` Python package or download browser binaries. The MCP server is the only supported invocation path; if unavailable, the ladder falls through to tier-1 (WebSearch confirmation/fallback).
