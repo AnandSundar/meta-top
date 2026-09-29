@@ -112,9 +112,9 @@ Rationale: a coordinated batch of 5 same-tick requests to the same upstream (DDG
 
 ### Step 3.0.0 — Tier-0 default firing (v1.6+, 2026-09-29)
 
-**Mandatory:** for every top-3 category from the region's `digital_categories` list, attempt tier-0 (Meta Ad Library via Playwright) **before** falling through to tier-1. This is the v1.6 default; the v1.5 framing of tier-0 as "advisory" is superseded.
+**Mandatory:** for every top-5 category from the region's `digital_categories` list, attempt tier-0 (Meta Ad Library via Playwright) **before** falling through to tier-1. This is the v1.7 default; the v1.6 framing of tier-0 as top-3 is expanded to top-5 per R2 and KD5.
 
-For each top-3 category, attempt:
+For each top-5 category, attempt:
 
 ```
 mcp__plugin_playwright_playwright__browser_navigate(
@@ -135,13 +135,13 @@ Where `{category-keyword}` is the slug-style keyword from the YAML's `digital_ca
 | Playwright MCP unavailable | Append `tier-0 skipped for {category}: playwright_mcp_not_configured` to `data_quality_note`; set seed floor |
 | `browser_navigate` errors (timeout, DNS) | Append `tier-0 skipped for {category}: <error_class>` to `data_quality_note`; set seed floor |
 
-**Cap:** ≤5 tier-0 Playwright navigations per invocation (typically 3 for top-3 categories; up to 5 if the region has 5 top categories in YAML). Each cross-region sweep counts toward the per-category tier-0 budget (≤3 cross-region navs per category for IN+US+UK sweep).
+**Cap (v1.7+, R2, KD5):** ≤5 tier-0 Playwright navigations per invocation (top-5 categories max; the budget stays ≤5 since one nav per category, so the total stays within the cap even at top-5). Each cross-region sweep counts toward the per-category tier-0 budget (≤3 cross-region navs per category for IN+US+UK sweep).
 
 **After tier-0 completes (or is skipped), continue to Step 3.0 sub-score routing below.**
 
-### Tier 0 — Meta Ads Library via Playwright (per-category, v1.5+, 2026-09-29)
+### Tier 0 — Meta Ads Library via Playwright (per-category, v1.7+, 2026-09-29)
 
-For EACH top-3 category (top categories from the YAML's `digital_categories` plus any live-replacement categories with ≥2 cited sources), fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `notion-template`, `chatgpt-prompt`, `excel-budget`, `ebook-bundle`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
+For EACH top-5 category (v1.7+: expanded from top-3 per R2 and KD5; top categories from the YAML's `digital_categories` plus any live-replacement categories with ≥2 cited sources), fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `notion-template`, `chatgpt-prompt`, `excel-budget`, `ebook-bundle`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
 
 - **longevity** — per-category: days since ad first appeared; 30+ → 2/3; 90+ → 3/3.
 - **variants** — per-category: count sibling ads per advertiser; 5–10 → 2/3; 20+ → 3/3; <3 → 0/3; 3–4 → 1/3 interpolating.
@@ -151,7 +151,7 @@ For EACH top-3 category (top categories from the YAML's `digital_categories` plu
 
 Trust + ethics: tier-0 surfaces **patterns** (longevity, variants, cross-country), NOT specific creator ad copy to clone. The "Category design, not content cloning" line stays intact.
 
-**Cross-region sweep (v1.5+):** For each top-3 category, after the `country={region_code}` query (where `{region_code}` is the YAML's region, e.g., `IN`), sweep `country=US` and `country=UK` for observed overlap (≤3 cross-region navigations per category, fold into the per-category tier-0 budget). Compute `cross_country` sub-score from observed overlap:
+**Cross-region sweep (v1.5+):** For each top-5 category, after the `country={region_code}` query (where `{region_code}` is the YAML's region, e.g., `IN`), sweep `country=US` and `country=UK` for observed overlap (≤3 cross-region navigations per category, fold into the per-category tier-0 budget). Compute `cross_country` sub-score from observed overlap:
 - Same advertiser + same ad creative across 2–3 countries → 1/2
 - Same advertiser + same ad creative across 5+ countries → 2/2
 - No observed overlap across the sweep → 0/2 (downgrades the v1.4 "EU transparency flag" proxy)
