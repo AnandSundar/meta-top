@@ -74,6 +74,8 @@ Run WebSearch queries per the canonical source categories **for digital template
 
 Pull 5–8 high-quality sources (US / IN: 5–8; CA / UK / AU: 4–6; AE: 3–5). Use WebFetch selectively on landing pages or Ad Library URLs when the search snippet is rich enough to justify a deeper read; cap WebFetch calls to keep total cost under ~20 calls per invocation. The 4 v1.3 winning-product queries fit within the existing 8-source ceiling; do not exceed it.
 
+**Source-tier diversification cap (v1.5+, 2026-09-29):** At least **70% of cited sources must be primary-tier** — regulatory body (FTC, ASCI, ASA, AANA, Ad Standards + CRTC, NMC + TRA), Meta (Ad Library URLs, Meta Newsroom, Meta Business Help), mainstream news outlets, and named practitioner case studies. At most **30% may be secondary-tier** — third-party blog posts, listicle roundups, comparison aggregators, social threads (Reddit / Quora / Twitter / FB Groups). When the research naturally lands above 30% secondary (e.g., the only sources that surfaced are blog posts), set `partial_research: true`, append `"source_tier_cap_exceeded: secondary tier at {n/8} > 30%"` to `data_quality_note`, and either trigger tier-2 keyless search for primary-tier anchors or accept the cap-exceeded caveat. Tier-0 (Meta Ad Library via Playwright) and tier-3 (curated `digital_marketplaces` URLs) are always primary-tier.
+
 **Ladder fallback (v1.1+, mirrors meta-top v1.1):** if the WebSearch total is **< 5** for US/IN, or **< 3** for CA/UK/AU/AE, walk the source ladder described in **Step 3.0** below — invoke tier 2 (Bash into `scripts/keyless_search.py`) for the top 2 queries, then tier 3 (WebFetch curated **`digital_marketplaces`** URLs from the region YAML). Cap total sources across all tiers at **≤8** (matching meta-top v1.1 line 85 — do not regress to a strict-less-than off-by-one). Set `partial_research: true` whenever tier 2 or 3 contributes ≥1 source.
 
 On a 429 or rate-limit response, retry with exponential backoff (max 2 retries). If still rate-limited after 2 retries, continue with remaining sources and set `partial_research: true`, `rate_limit_hit: true` in the digest's metadata.
@@ -84,17 +86,24 @@ When the host's WebSearch tool is unavailable or returns empty payloads across m
 
 **Ladder (use in order, stop when one tier returns ≥5 sources / the cap is hit):**
 
-### Tier 0 — Meta Ads Library via Playwright (mandatory, v1.4+)
+### Tier 0 — Meta Ads Library via Playwright (per-category, v1.5+, 2026-09-29)
 
-Always fire `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}` **before** tier 1 when the orchestrator needs longevity / variants / cross_country signal. Capture ad IDs + advertiser names + first-seen dates via `browser_snapshot` (a11y-tree), then construct the three sub-scores:
+For EACH top-3 category (top categories from the YAML's `digital_categories` plus any live-replacement categories with ≥2 cited sources), fire one `browser_navigate` to `https://www.facebook.com/ads/library/?active_status=active&country={region_code}&q={category-keyword}` where `{category-keyword}` is the category's slug-style keyword (e.g., `notion-template`, `chatgpt-prompt`, `excel-budget`, `ebook-bundle`). Use `browser_snapshot` (a11y-tree) to extract per-category ad IDs, advertiser names, and first-seen dates. Compute:
 
-- **longevity** — filter by `active_status=active`, count days since ad first appeared in Library (30+ → 2/3; 90+ → 3/3).
-- **variants** — click advertiser, count sibling ads in same Library entry (5–10 → 2/3; 20+ → 3/3; <3 → 0/3; 3–4 → 1/3 interpolating).
-- **cross_country** — same ad across multiple `country=` filter values (2–3 → 1/2; 5+ → 2/2).
+- **longevity** — per-category: days since ad first appeared; 30+ → 2/3; 90+ → 3/3.
+- **variants** — per-category: count sibling ads per advertiser; 5–10 → 2/3; 20+ → 3/3; <3 → 0/3; 3–4 → 1/3 interpolating.
+- **cross_country** — see U3 (cross-region sweep); per-category observed-overlap scoring.
 
-**Mandatory for these 3 sub-scores** — tier-1 through tier-3 are no longer authoritative for them, only confirmation/qualification. **Cap: ≤1 Playwright navigation per invocation**, separate from tier-4's ≤2 budget. **Browser automation only** (no `pip install playwright`) — requires the `playwright` MCP server configured in the host environment. Fall through to tier 1 if tier-0 hits Meta's verification wall (login/CAPTCHA) or Playwright is unavailable.
+**Mandatory for these 3 sub-scores** — tier-1 through tier-3 are no longer authoritative for them, only confirmation/qualification. **Cap: ≤5 Playwright navigations per invocation** (one per top category), separate from tier-4's ≤2 budget. **Total Playwright nav cap: ≤7 per invocation** (5 tier-0 + 2 tier-4). **Browser automation only** (no `pip install playwright`) — requires the `playwright` MCP server configured in the host environment. Fall through to tier 1 if tier-0 hits Meta's verification wall (login/CAPTCHA) or Playwright is unavailable.
 
-Trust + ethics: tier-0 surfaces **patterns** (longevity, variants, cross-country) — NOT specific creator ad copy to clone. The "Category design, not content cloning" line stays intact.
+Trust + ethics: tier-0 surfaces **patterns** (longevity, variants, cross-country), NOT specific creator ad copy to clone. The "Category design, not content cloning" line stays intact.
+
+**Cross-region sweep (v1.5+):** For each top-3 category, after the `country={region_code}` query (where `{region_code}` is the YAML's region, e.g., `IN`), sweep `country=US` and `country=UK` for observed overlap (≤3 cross-region navigations per category, fold into the per-category tier-0 budget). Compute `cross_country` sub-score from observed overlap:
+- Same advertiser + same ad creative across 2–3 countries → 1/2
+- Same advertiser + same ad creative across 5+ countries → 2/2
+- No observed overlap across the sweep → 0/2 (downgrades the v1.4 "EU transparency flag" proxy)
+
+For non-IN regions, sweep `IN` + `UK` + `US` as the cross-region set (so even when the YAML is `US`, the sweep still touches `IN` + `UK` + `US` for cross-region overlap detection). This is the only source of `cross_country` evidence in v1.5+.
 
 1. **WebSearch tool** — host-native search. Highest-quality tier; always try first.
 2. **Bash into Python `scripts/keyless_search.py`** — invoke the bundled keyless floor:
@@ -106,6 +115,11 @@ Trust + ethics: tier-0 surfaces **patterns** (longevity, variants, cross-country
    - Exit code `0` = ≥1 result; exit code `2` = zero results.
    - Top 2 queries from the seed list above are sufficient; more queries wastes capacity.
 3. **WebFetch curated `digital_marketplaces` URLs** from `references/regions/<region>.yaml`'s `digital_marketplaces` list (5–8 marketplace-domain URLs per region; cap at **4** WebFetch calls to keep within the 20-call ceiling). Skip any URL that 403s/404s. Marketplace URLs are stable catalog/index pages (gumroad.com/discover, instamojo.com/featured, notion.so/marketplace, creativemarket.com, canva.com/creators), so they survive subdomain migrations better than individual creator-store URLs.
+3.5. **Meta Library advertiser-count proxy (v1.5+, benchmark-specific, 2026-09-29)** — fire this benchmark-only tier when tier 3 returns 403/404 on **≥2 marketplace URLs** AND `benchmarks.cpm_range` is empty (or set to the `"Insufficient public data — refer to Meta Ad Library for live benchmarks"` no-estimate string) across all `top_categories` after tier 3. Derive a heuristic CPM range from the **tier-0 Meta Ad Library advertiser count per top-3 category**:
+   - 0–2 unique advertisers → low competition: `cpm_range ≈ {currency}×0.5 to {currency}×2` baseline
+   - 3–10 unique advertisers → moderate competition: `cpm_range ≈ {currency}×1.5 to {currency}×6`
+   - 11+ unique advertisers → high competition: `cpm_range ≈ {currency}×4 to {currency}×15`
+   This is a derived heuristic, NOT a measured CPM. Label the output benchmark line `[heuristic from advertiser count, not a measured CPM]`. When triggered, set `partial_research: true` and append `"benchmark_proxy: tier-3.5 advertiser-count heuristic for {n} of {m} categories (low: {n_low} / mid: {n_mid} / high: {n_high})"` to `data_quality_note`. Does NOT count against the source budget (derivation from tier-0 evidence).
 4. **Playwright browser fallback (v1.2+, 2026-09-27)** — fire this tier only when tier 3 returned 403/404 on **≥2 marketplace URLs** OR `pricing_examples` is empty across all `top_categories` after tier 3. Invoke the **playwright MCP server** via:
    - `mcp__plugin_playwright_playwright__browser_navigate` to load the JS-driven marketplace URL (e.g., Canva Creators search, dynamic Gumroad category page, Instamojo storefront).
    - `mcp__plugin_playwright_playwright__browser_snapshot` (a11y-tree) to extract per-product prices in INR.
@@ -155,7 +169,7 @@ For each `top_categories[]` entry, classify each of the six signals by running t
 |---|---|---|---|
 | `longevity` | no ads seen running | 30+ days running → 2 | 90+ days running → 3 |
 | `variants` | <3 variants from one advertiser | 5–10 variants → 2 | 20+ variants → 3 |
-| `cross_country` | 1 country | 2–3 countries → 1 | 5+ countries → 2 |
+| `cross_country` (v1.5+ observed-overlap, see U3 cross-region sweep) | no observed overlap across sweep → 0 | same advertiser + same ad creative across 2–3 countries → 1 | same advertiser + same ad creative across 5+ countries → 2 |
 | `engagement` | low / no buying-intent comments | moderate → 1 | high buying-intent ("link please?", refund-policy questions) → 2 |
 | `marketplace` | flat / declining on Gumroad / Etsy / Notion / Canva Creators / Instamojo | stable → 1 | rising 50%+ → 2 |
 | `pain_signal` | few Reddit / Quora / FB-Group mentions | repeated → 1 | desperate tone ("I wish someone would...") → 2 |
@@ -176,6 +190,24 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
 
 ```json
 {
+  "snapshot_version": "v1.5+",
+  "snapshot_date": "<YYYY-MM-DD>",
+  "snapshot_id": "<sha256 first-12-chars of canonical digest for diff/lookup>",
+  "prior_snapshot_ref": {
+    "snapshot_id": "<sha256 first-12-chars of the prior snapshot, when available>",
+    "snapshot_date": "<YYYY-MM-DD of prior snapshot>",
+    "delta_window_days": <integer, days since prior snapshot>
+  },
+  "price_delta": [
+    {
+      "category": "<category name>",
+      "prior_price_range": "<currency><X>-<currency><Y>",
+      "current_price_range": "<currency><X>-<currency><Y>",
+      "delta_pct": <numeric, positive = price went up, negative = went down>,
+      "delta_direction": "up|down|flat|new|no_prior",
+      "snapshot_date_prior": "<YYYY-MM-DD>"
+    }
+  ],
   "region": "<region_code>",
   "display_name": "<from YAML>",
   "currency": "<ISO 4217>",
@@ -195,7 +227,8 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
           "source": "<marketplace name>",
           "source_url": "<URL>",
           "observed_price": "<currency><X>",
-          "pricing_tier_source": "observed",
+          "pricing_tier_source": "observed_live | observed_snippet | inferred_seed | unverified",
+          "snippet_text": "<the extracted text — required when pricing_tier_source = observed_snippet; absent for observed_live / inferred_seed / unverified>",
           "pricing_tier_confidence": "high|medium|low"
         }
       ],
@@ -248,7 +281,14 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
       "name": "<source name>",
       "url": "<URL>",
       "accessed_at": "<YYYY-MM-DD>",
-      "kind": "<regulatory-body|meta|news|case-study|ad-library|marketplace|other>"
+      "kind": "<regulatory-body|meta|news|case-study|ad-library|marketplace|other>",
+      "tier": "primary|secondary",
+      "extracted_fields": ["<pricing|advertiser|ad_id|ad_creative_url|engagement_metric|benchmark|other>"],
+      "audit_provenance": {
+        "tier_origin": "<websearch|webfetch|keyless_ddg|keyless_searxng|playwright_tier0|playwright_tier4|curated_yaml>",
+        "fetch_status": "<200|403|404|429|rate_limited|other>",
+        "snippet_excerpt": "<optional 1-sentence excerpt of what was extracted — for pricing_examples sources, the exact phrase carrying the price>"
+      }
     }
   ],
   "data_freshness_note": "<e.g. 'Pricing examples reflect ads active in the last 60 days'>",
@@ -260,7 +300,7 @@ Emit a single JSON object to stdout matching the schema below. All currency valu
 }
 ```
 
-JSON-schema note: the YAML-side anchor field `digital_categories` maps onto the digest key **`top_categories`** for orchestrator-render compatibility (the meta-top orchestrator already knows how to render `top_categories[]` into Section (b) — renaming the JSON key would force a rendering-path edit). The `name` strings inside each `top_categories` item, however, are `digital_category`-shaped (Notion template, prompt pack, etc.) — never course names, cohort program names, SaaS product names, or membership names. **Hard-block:** if no item in `top_categories[*].pricing_examples` carries `"pricing_tier_source": "observed"` across at least one category, append `"category-pricing-research-required"` to `data_quality_note` — this is the trigger the orchestrator uses to skip the Option B brief.
+JSON-schema note: the YAML-side anchor field `digital_categories` maps onto the digest key **`top_categories`** for orchestrator-render compatibility (the meta-top orchestrator already knows how to render `top_categories[]` into Section (b) — renaming the JSON key would force a rendering-path edit). The `name` strings inside each `top_categories` item, however, are `digital_category`-shaped (Notion template, prompt pack, etc.) — never course names, cohort program names, SaaS product names, or membership names. **Hard-block (v1.5+, per-category):** for each of the top 3 categories, count `pricing_examples[].pricing_tier_source == "observed_live"`. Categories with 0 `observed_live` entries trigger the per-category caveat (the orchestrator surfaces the blockquote in section (b) for that category and marks Option B tiers `[unverified starting points, not observed-live]` inline). If all 3 top categories have 0 `observed_live`, the orchestrator appends `"category-pricing-research-required"` to `data_quality_note` and skips the Option B brief — this is the full-block trigger.
 
 ### Step 5 — Transparency
 
@@ -269,7 +309,7 @@ Always include `data_freshness_note` and `data_quality_note`. Honest caveats are
 - `data_freshness_note` — what time window the observed ads cover (e.g., "Ads active in the last 60 days as of 2026-09-27").
 - `data_quality_note` — honest signal on source depth, region-specific gaps, rate-limit impact, and the **`category-pricing-research-required`** trigger if it fires. v1.3 also surfaces `winning_score` confidence distribution here when the region has thin data: e.g., `winning_score confidence: low for 4 of 6 signals (longevity, variants, cross_country, pain_signal)` — tells the orchestrator to render `confidence: low` next to the rubric line for that category.
 
-At least one pricing example in `top_categories[*].pricing_examples` must carry `"pricing_tier_source": "observed"` before the orchestrator is allowed to ship the Option B brief as concrete tiers. If none clears the bar, still include `top_categories` with `pricing_examples: []` and append a `category-pricing-research-required` line into `data_quality_note`.
+At least one `observed_live` pricing example per top-3 category in `top_categories[*].pricing_examples` must clear before the orchestrator ships the Option B brief as concrete tiers. If 1–2 of top-3 categories lack `observed_live`, the brief still ships with caveats (per-category blockquote in section (b), inline `[unverified starting points, not observed-live]` markers in Option B). If all 3 lack `observed_live`, still include `top_categories` with `pricing_examples: []` and append a `category-pricing-research-required` line into `data_quality_note` — the full-block trigger.
 
 ### Step 6 — Scope guard
 
