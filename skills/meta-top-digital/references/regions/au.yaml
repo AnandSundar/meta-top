@@ -14,13 +14,15 @@ prohibited_categories_digital:
   - mlm-recruitment
   - payday-lending
   - get-rich-quick-income-claims
+  - gambling-in-app-purchase
+  - crypto-derivatives
   - gambling-without-state-license
   - online-courses
   - cohort-programs
   - saas-subscriptions
   - paid-memberships
   - physical-goods-with-shipping
-last_reviewed: "2026-09-27"
+last_reviewed: "2026-10-01"
 format_constraints:
   fb_primary_text_chars: 125
   fb_headline_chars: 40

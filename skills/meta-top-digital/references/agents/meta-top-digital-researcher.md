@@ -159,9 +159,13 @@ For each marketplace-domain URL in `references/regions/<region>.yaml`'s `digital
 5. ~~(Old tier-4 Playwright browser fallback — removed in v1.8; folded into tier-0 as a per-category retry path via the Step 3.5 cap-raise gate. The ≤4 retry navs are NOT undirected — they follow a strict priority order in Step 3.5 below.)~~
 6. **Curated anchors only** — final fallback: emit a digest using the region YAML's `digital_categories` with `pricing_examples: []`, and append `"data_quality_note": "All ladder tiers exhausted; brief uses curated anchors only."` Continue to Step 4.
 
-#### Step 3.5 — Tier-0 cap-raise gate (v1.8, R2, KD5)
+#### Step 3.5 — Tier-0 unconditional cap + F16 baseline logging (v1.9)
 
-After the default ≤9 tier-0 Playwright navigations complete (5 category-level + 4 marketplace-level), compute whether to raise the cap to ≤13. Pseudocode:
+Per KTD2 of the v1.9 plan, the v1.8 conditional cap-raise gate is removed. Tier-0 Playwright cap is now unconditional ≤13 per invocation. The four trigger conditions previously gating the cap (`N∈{1,2,3}` of top-3 lacking `observed_live`, `partial_research`, `rate_limit_hit`, any `inferred_seed` pricing example) are still detected for F16 baseline logging (R5) and `data_quality_note` annotation, but no longer affect the cap math. This closes the v1.8 spec/memory drift on the `meta-top-digital-full-research-default` rule.
+
+Sub-cap allocation (KTD2): ≤5 category-level + ≤4 marketplace-level + ≤2 open-ended = ≤11 default + ≤2 retry navs = ≤13 total.
+
+Pseudocode:
 
 ```
 top3 = top_categories.slice(0, 3)
@@ -169,26 +173,46 @@ def has_observed_live(c):
     ex = c.get("pricing_examples", [])
     return len(ex) > 0 and any(p.get("pricing_tier_source") == "observed_live" for p in ex)
 lacking = [c for c in top3 if not has_observed_live(c)]
-N = len(lacking)
+observed_live_lacking_count = len(lacking)
 
-if N == 0:
-    tier_0_cap = 9  # default, no raise needed
-elif N in (1, 2, 3):
-    tier_0_cap = 13
-    append_to_data_quality_note(
-        f"tier-0 cap raised: 9 → 13 ({N} of 3 categories still lack observed_live)"
-    )
+partial_research = digest.get("partial_research", False)
+rate_limit_hit = digest.get("rate_limit_hit", False)
+verification_wall_hit = digest.get("verification_wall_hit", False)
+inferred_seed = any(
+    p.get("pricing_tier_source") == "inferred_seed"
+    for c in top3
+    for p in c.get("pricing_examples", [])
+)
+
+tier_0_cap = 13  # unconditional per KTD2; the v1.8 conditional gate is removed
 ```
 
-**Priority order for the additional ≤4 retry navigations** (KD6 — no undirected Playwright):
+**F16 baseline logging (R5)** — one ISO-8601 line per invocation appended to `references/f16-baseline-log.md`:
+
+```
+outcome = determine_outcome()  # succeeded | partial | blocked
+latency_ms = int((time.time() - invocation_start) * 1000)
+f16_line = (
+    f"{iso8601_now()} {region} "
+    f"{observed_live_lacking_count} "
+    f"{int(partial_research)} {int(rate_limit_hit)} "
+    f"{int(verification_wall_hit)} {int(inferred_seed)} "
+    f"{outcome} {latency_ms}"
+)
+append_to("references/f16-baseline-log.md", f16_line)
+```
+
+Schema (R5): `<ISO8601> <region> <observed_live_lacking:0-3> <partial_research:0|1> <rate_limit_hit:0|1> <verification_wall_hit:0|1> <inferred_seed:0|1> <outcome:succeeded|partial|blocked> <latency_ms:integer>`. The log is for empirical validation of latency-budget raise (Q5); it does not gate any v1.9 work. `verification_wall_hit` is distinct from `rate_limit_hit` — a verification wall means Meta served a CAPTCHA/login, not a transient rate-limit; the two failure modes need different fallbacks.
+
+**`data_quality_note` annotation** — when any trigger condition fires, append a one-line note recording the four-condition union flag set. Format: `"v1.9 tier-0 cap unconditional ≤13; observed_live_lacking={N}, partial_research={b}, rate_limit_hit={b}, verification_wall_hit={b}, inferred_seed={b}"`. Preserves the v1.8 informational annotation under the unconditional-cap regime.
+
+**Priority order for the ≤2 retry navigations** (KD6 — no undirected Playwright):
 
 1. Per category still lacking `observed_live`: re-fire the highest-priority marketplace URL from the **marketplace rotation order** (F11 hash-based round-robin) that was NOT yet tried for that category in this invocation.
 2. If the same marketplace URL was already tried for all 3 lacking categories, fall through to the next marketplace URL in the rotation.
 3. If the rotation is exhausted, the additional navs are spent on a single best-bet landing page per lacking category (e.g., the top Gumroad search-result for the highest-volume category keyword).
 
-**After the cap-raise retries complete**, the hard-block gate re-evaluates: if 0 of 3 categories still carry `observed_live`, the v1.5 hard-block callout fires and the brief ends — regardless of whether the cap was raised. (R6, R8)
-
-**Total tier-0 Playwright budget** must not exceed 13 per invocation. Cap-raise navs are 100% tier-0 (no separate tier-4 fallback in v1.8).
+**After the retry navs complete**, the hard-block gate re-evaluates: if 0 of 3 categories still carry `observed_live`, the v1.5 hard-block callout fires and the brief ends. (R6, R8)
 
 **Transparency rule:** when tier-1, tier-2, or tier-2.5 contributes any source, set `partial_research: true` and append a `data_quality_note` line: `"Ladder tier <N> contributed <K> sources after tier-0 returned <M>."` Do not silently substitute.
 

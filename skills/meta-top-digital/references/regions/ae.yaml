@@ -14,6 +14,8 @@ prohibited_categories_digital:
   - crypto-trading-signals
   - mlm-recruitment
   - forex-copy-trading
+  - forex-without-license
+  - crypto-without-license
   - payday-lending
   - get-rich-quick-income-claims
   - unlicensed-financial-advisory
@@ -22,7 +24,8 @@ prohibited_categories_digital:
   - saas-subscriptions
   - paid-memberships
   - physical-goods-with-shipping
-last_reviewed: "2026-09-27"
+last_reviewed: "2026-10-01"
+placeholder_note: "TBD / placeholder pending Arabic-language marketplace research. The current digital_marketplaces list (Gumroad, Notion, Etsy, Creative Market) is global-English and may not represent the UAE digital-product ad surface. Curate against UAE-specific Arabic-language platforms in v1.9.1."
 format_constraints:
   fb_primary_text_chars: 125
   fb_headline_chars: 40
