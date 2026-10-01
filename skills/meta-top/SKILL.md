@@ -127,6 +127,26 @@ Render the JSON digest into the canonical six-section template, preserving the b
    | {name} | {currency}{low}–{currency}{high} | observed_live / observed_snippet / inferred_seed / unverified | high / medium / low | [n sources] |
    ```
    The `Tier source` column maps to the sub-agent's `pricing_examples[*].pricing_tier_source` enum (v1.5+, see SKILL CONTRACT); the `Confidence` column maps to the sub-agent's `pricing_examples[*].pricing_tier_confidence` (or `winning_score` confidence for the rubric line). Render `[unverified starting points, not observed-live]` inline next to any row where `Tier source = inferred_seed` or `unverified`. Curated-vs-live conflict resolution: live research is authoritative; curated `top_categories` are seeds that get **replaced** when live entries have ≥2 cited sources. Replacements surface in `data_quality_note` under Section (b). **Per-category winning-product rubric (v1.3):** when the digest's `top_categories[]` entry carries `winning_signals` + `winning_score`, render each category line as `- {name} · {currency}{price-range} · Score: {X}/14 — {band} · [longevity {a}, variants {b}, cross_country {c}, engagement {d}, marketplace {e}, pain_signal {f}]` where `{X}` = `winning_score.total` (0–14), `{band}` = `strong_bet` (9+) / `promising` (6–8) / `skip` (<6), and the six sub-scores are `winning_signals.{signal}.sub_score`. If any signal has `confidence: low`, append `(confidence: low)` to the line.
+
+   **Winning Product Verdict (v1.9+, ported from meta-top-digital v1.6+, 2026-10-01).** Immediately after the per-category rubric lines under Section (b), render a single deterministic verdict callout that names ONE category as the winner. The verdict uses a four-gate tie-break and a 0-100 confidence percentage. The callout reads:
+
+   ```
+   🏆 Winning product (<region>): <category> · Score <X>/14 · Confidence <Y>% — <one-line reason>
+   ```
+
+   **Four-gate tie-break (KTD1, applied in order to `top_categories[0..2]` from the digest):**
+
+   | Gate | Rule | Tie-break if multiple pass |
+   |---|---|---|
+   | 1 | Highest `winning_score.total` | Higher score wins |
+   | 2 | Carries ≥1 `pricing_examples[].pricing_tier_source: observed_live` | Winner must have ≥1 observed_live |
+   | 3 | Category name NOT in `prohibited_categories` | Winner must not be prohibited |
+   | 4 | Earliest YAML seed order (lowest index in `top_categories[]`) | Earlier seed wins |
+
+   **Confidence percentage (R4).** Compute `confidence = min(100, (observed_live_count × 30) + (total_sources × 5) + (recency_bonus × 10))` where `observed_live_count` is the count of `observed_live` examples across `top_categories[0..2]`, `total_sources` is the count of entries in the digest's `sources[]` array, and `recency_bonus = 1` when the live research ran within 24 hours of invocation (compare `snapshot_date` to invocation date), else 0. Thresholds: `≥70%` = `winning-grade`, `40–69%` = `promising`, `<40%` = `speculative`. Render the band inline next to the percentage: `🏆 Winning product (IN): Notion Life-OS Templates · Score 11/14 · Confidence 85% (winning-grade) — highest score with observed_live on Gumroad`.
+
+   **When to skip the callout (R3).** When 0 of the top-3 categories carry `observed_live`, do NOT render the verdict callout — the v1.5 hard-block callout (`category-pricing-research-required`) is the output and the brief ends before Option B. When 1-2 of 3 categories carry `observed_live`, render the verdict on whichever category passes all four gates; the caveat callout for the lacking categories still appears under Section (b) as the v1.5 per-category caveat.
+
 3. **Winning ad creative patterns.** Hook type (curiosity / problem-solution / before-after / testimonial / UGC / offer-stack), format (FB primary text + headline combo / IG Reels 9:16 vertical / carousel / WA Status 24h ephemeral / collection), where currently running. Cite ≥3 sources for patterns.
 4. **Specific product examples currently running.** Brand or product name, observed ad-creative angle, observed price point (in local currency), source URL. ≥3 examples; thin-data regions allow ≥2 with a `data_quality_note`.
 4a. **Underground signals observed (v1.3, qualitative callout).** When the digest's `underground_signals[]` is non-empty, render a single blockquote titled `Underground signals observed` immediately under Section (d). Each entry is one bullet: `- {kind}: {observation} ([source]({url}))`. Kinds: `scarcity_working` (sold-out → back-again pattern), `refund_policy_questions` (high purchase-intent in comments), `specificity` ("made ₹X in Y days" specific numbers), `creator_collab_to_paid` (organic reshared as ad), `lookalike_1pct_hint` (1% lookalike audience hint). Empty `underground_signals[]` → omit the blockquote entirely; never emit an empty placeholder.
@@ -202,6 +222,8 @@ Frame 6: Send-to-CTA
 Always rendered as a blockquote immediately before the post-menu:
 
 > **Category design, not content cloning.** Find a proven category, identify a positioning gap, create YOUR original product, position with a USP, test small-budget Meta ads, scale what works.
+
+> **v1.9 changelog FYI** (renders once on the first invocation after cutover, then suppressed): 🏆 winning-verdict callout now applies (parity with meta-top-digital since v1.6). Use the per-category rubric in Section (b) for the underlying scoring.
 
 ## Step 4: Post-Menu Routing (inline)
 
