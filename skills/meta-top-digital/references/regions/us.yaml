@@ -20,7 +20,7 @@ prohibited_categories_digital:
   - saas-subscriptions
   - paid-memberships
   - physical-goods-with-shipping
-last_reviewed: "2026-09-27"
+last_reviewed: "2026-10-01"
 format_constraints:
   fb_primary_text_chars: 125
   fb_headline_chars: 40

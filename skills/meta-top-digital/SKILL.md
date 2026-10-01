@@ -105,7 +105,7 @@ Scope ceiling (matching meta-top v1.1 line 85 -- do not regress to off-by-one): 
 Mandatory before dispatching the sub-agent.
 
 1. **Region validation.** Match `<region>` argument against the v1 list: `in`, `us`, `ca`, `uk`, `au`, `ae`. Match is case-insensitive; normalize to the v1 code. If no match, **stop** and emit the region-not-in-v1 response (see Pre-Flight Failure Modes).
-2. **Region-mirror check.** If the region is **in the v1 list** but its YAML is missing from `skills/meta-top-digital/references/regions/<region>.yaml` (only India is shipped in v1; US, CA, UK, AU, AE arrive in the U5 mirror unit), emit the region-not-yet-shipped notice below and stop. Never silently fall back to the India YAML.
+2. **Region-mirror check.** As of v1.9 (U5 mirror landed), all six v1 regions (`in`, `us`, `ca`, `uk`, `au`, `ae`) ship YAMLs at `skills/meta-top-digital/references/regions/<region>.yaml`. The check passes if the YAML exists; if missing for any region in the v1 list, surface a structural error and stop — never fabricate region anchors or silently fall back to a different region's YAML.
 3. **Optional flags.** Parse `--category=<name>` (narrows the brief to one digital category by name) and `--emit=html` (writes a self-contained HTML brief to `<root>/meta-top-reports/<region>-<YYYY-MM-DD>.html` instead of chat-only). Unknown flags log a one-line FYI in the output footer and are otherwise ignored.
 4. **Region mismatch detection.** If `--category=<name>` does not appear in the live research's `digital_categories` for that region, surface a FYI: `Category "<name>" not in this region's digital-only top list — surfacing as cross-category note.`
 5. **Objective-vs-format check.** If a region config declares a category with a regulatory restriction (e.g., UAE financial products require Arabic landing pages, US healthcare requires HIPAA-aware copy), surface this in the pre-flight footer so Section (a) can carry it forward.
@@ -280,30 +280,9 @@ For regions outside v1, try:
 Stopping without dispatch.
 ```
 
-### Region not yet shipped (mirror landed later)
+### Region not yet shipped (deprecated — U5 mirror landed in v1.9)
 
-For regions in the v1 list whose YAML is not yet present in `skills/meta-top-digital/references/regions/` (in v1 only India ships; US, CA, UK, AU, AE arrive in the U5 mirror unit), stop and emit:
-
-```
-📊 meta-top-digital v{X} · region: {arg} · {YYYY-MM-DD}
-
-Region "{arg}" ({display_name}) is in the v1 region list, but its region
-YAML has not shipped yet in this skill. Only India (in) is live in v1;
-the other five v1 regions arrive via the U5 mirror unit.
-
-v1 ship status:
-  ✓ in (India) — references/regions/in.yaml present
-  ⏳ us, ca, uk, au, ae — U5 mirror unit, planned
-
-Workaround for non-IN users:
-  1. Use `/meta-top <region>` for the broader Meta-ads brief (covers
-     physical D2C + cohorts + SaaS + digital downloads).
-  2. Watch the GitHub repo for the U5 mirror release.
-
-Stopping without dispatch.
-```
-
-The notice names the v1 ship status and points to `/meta-top` as the immediate workaround — it does **not** silently fall back to the India YAML.
+This notice applied only when a v2 region was added to the v1 region list ahead of its YAML. As of v1.9, all six v1 regions (`in`, `us`, `ca`, `uk`, `au`, `ae`) ship YAMLs; this notice is no longer reachable in the v1 invocation path. Kept here as a structural marker for future v2 region additions.
 
 ### Brand-collision detection
 
