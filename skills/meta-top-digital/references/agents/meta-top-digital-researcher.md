@@ -100,7 +100,7 @@ The ladder has two dispatch regimes. Mix them explicitly:
 - **Tier-1** WebSearch — host-native search; fires as confirmation/fallback after tier-0 completes (NOT the default).
 - **Tier-2** keyless DDG/SearXNG via `scripts/lib/web_search_keyless.py` — stdlib HTTP; top-2 queries from the seed list above are sufficient.
 
-The split keeps the ≤9 per-invocation Playwright nav cap from being spent on categories that could have been cleared by the cheap tiers. Run tier-0 first, then escalate to the parallel tiers only for what tier-0 did not cover. **Cross-region sweep (v1.7 IN + US + UK per category) is OPTIONAL in v1.8** — when time budget is tight, the researcher skips the cross-region sweep and focuses on the local region's Meta Ad Library.
+The split keeps the ≤9 per-invocation Playwright nav cap from being spent on categories that could have been cleared by the cheap tiers. Run tier-0 first, then escalate to the parallel tiers only for what tier-0 did not cover. **Cross-region sweep (v1.7 IN + US + UK per category) is MANDATORY for top-3 categories in v1.9.1** — the sweep fires every invocation regardless of time budget. ≤9 tier-0 navs allocated (3 regions × top-3 categories). Per v1.9.1 KTD1, OPTIONAL means "always skipped for thin-data regions like IN under the ≤120s budget," which defeats the `crosscountry` sub-score entirely. Engagement and pain-signal sub-routes (v1.7–v1.8) defer to v1.9.2 per Playwright probe (2026-10-01) — FB Groups are private/login-walled, Reddit reCAPTCHA-walls, Quora topic URLs return 404.
 
 **Jitter (v1.7+, 2026-09-29):** Between any two Playwright navigations, sleep `random.uniform(0, 0.5)` seconds (0–500ms). Applies to:
 - Between tier-0 navigations across the three sub-routes (Meta Ad Library, marketplaces, open-ended discovery).
@@ -137,7 +137,7 @@ For each marketplace-domain URL in `references/regions/<region>.yaml`'s `digital
 
 **Marketplace rotation rule (F11, 2026-09-29):** the region YAML's `digital_marketplaces` list typically holds 8 URLs (e.g., Gumroad, Instamojo, Notion Marketplace, Creative Market, Canva Creators, Lemon Squeezy, ASCI Code, Meta India landing). Selection of which ≤4 to navigate per invocation follows a round-robin keyed on a hash of `(region_code, invocation_date)` — first 4 deterministic on day 1, next 4 on day 2, etc. — so the union of consecutive invocations covers the full list. **Exception:** when `data_quality_note` from a prior invocation flagged specific marketplace URLs as "blocked / 403 / partial render" for this region, those URLs are deprioritized in the rotation (placed at the tail of the day's selection order) and the rotation absorbs the next non-blocked URL into the ≤4 head.
 
-**Cap (v1.8, R2, KD5):** ≤9 tier-0 Playwright navigations per invocation by default (5 category-level + 4 marketplace-level). When N∈{1,2,3} of top-3 categories still lack `observed_live` after the default ≤9 navs, raises to ≤13 (4 additional retry navs). See Step 3.5 for the cap-raise gate. Cross-region sweep counts toward per-category tier-0 budget when fired (≤3 cross-region navs per category for IN+US+UK sweep); cross-region sweep is OPTIONAL in v1.8 (see Step 3.0a).
+**Cap (v1.9.1, KTD1/KTD2/KTD5):** ≤13 tier-0 Playwright navigations per invocation — unconditional. Sub-cap allocation: ≤3 category-level (top-3 only, was ≤5 in v1.9) + ≤9 cross-region (3 regions × top-3, MANDATORY in v1.9.1, was ≤0 OPTIONAL in v1.8) + ≤1 retry (was ≤2 in v1.9). Marketplace-level (≤4 in v1.9) and open-ended (≤2 in v1.9) sub-routes dropped to 0 — v1.9 IN run surfaced 1/4 marketplace successes (Gumroad priced in CAD not INR) and 0/2 open-ended successes (search engines captcha-wall Playwright). Cross-region sweep is MANDATORY per KTD1, not OPTIONAL — fires every invocation regardless of time budget.
 
 **After tier-0 completes (or is skipped), continue to the tier-1+ numbered ladder below for pricing signals, creative patterns, and benchmark data.**
 
@@ -163,7 +163,7 @@ For each marketplace-domain URL in `references/regions/<region>.yaml`'s `digital
 
 Per KTD2 of the v1.9 plan, the v1.8 conditional cap-raise gate is removed. Tier-0 Playwright cap is now unconditional ≤13 per invocation. The four trigger conditions previously gating the cap (`N∈{1,2,3}` of top-3 lacking `observed_live`, `partial_research`, `rate_limit_hit`, any `inferred_seed` pricing example) are still detected for F16 baseline logging (R5) and `data_quality_note` annotation, but no longer affect the cap math. This closes the v1.8 spec/memory drift on the `meta-top-digital-full-research-default` rule.
 
-Sub-cap allocation (KTD2): ≤5 category-level + ≤4 marketplace-level + ≤2 open-ended = ≤11 default + ≤2 retry navs = ≤13 total.
+Sub-cap allocation (v1.9.1, KTD2/KTD5): ≤3 category-level (top-3 only) + ≤9 cross-region (MANDATORY per KTD1, 3 regions × top-3) + ≤1 retry = ≤13 total. Marketplace-level and open-ended sub-routes dropped to 0 (KTD2/KTD3 from v1.9 IN run evidence).
 
 Pseudocode:
 
